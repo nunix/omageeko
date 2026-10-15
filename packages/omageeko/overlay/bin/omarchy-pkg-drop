@@ -14,8 +14,8 @@ declare -A selected=()
 for pkg in "$@"; do
   while read -r target; do
     case "$target" in
-      rpm:*)
-        name=${target#rpm:}
+      rpm:* | repo:*)
+        name=${target##*:}
         if [[ -z ${selected[$name]} ]] && rpm -q -- "$name" &>/dev/null; then
           rpms+=("$name")
           selected[$name]=1

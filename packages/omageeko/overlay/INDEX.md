@@ -28,6 +28,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-version-channel | `tumbleweed / omageeko` |
 | omarchy-channel-current | `stable` (pinned upstream) or `dev` (linked checkout) |
 | omarchy-channel-set | explains omageeko follows `upstream.lock` |
+| omarchy-install-and-launch | Flathub-resolved packages launch with `flatpak run <id>` |
 | omarchy-snapshot | create: snapper (all configs). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
 
 ## Patches (`patches/`, applied with `--fuzz=0`)
@@ -43,6 +44,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-apply-lock | lock PAM `account include common-account` (TW has no system-local-login) |
 | omarchy-setup-security-fingerprint | lock-screen-only by default (`--all` = upstream sudo+polkit+lock); for `--all`, copy /usr/lib/pam.d/{sudo,polkit-1} to /etc before editing; polkit stack includes common-*; packages via omarchy-pkg-add (+fprintd-pam) |
 | omarchy-remove-security-fingerprint | guard the /etc/pam.d/sudo grep (only exists after --all) |
+| omarchy-update-time | chronyd restart + `chronyc makestep` (TW uses chrony) |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 
 ## Added files (`overlay/share/`)
@@ -53,6 +55,18 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf` (omageeko-hardware) | readable names for UCM laptop audio nodes (panel labels by node.nick) |
 | `/usr/share/omarchy/logo.txt` and skel `branding/screensaver.txt` | omageeko wordmark (Omarchy's block font; O/M/A glyphs reused) replaces the Omarchy logo; the original is kept at `/usr/share/omageeko/omarchy-logo.txt` |
 | `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports |
+
+## Menu edits (`menu-transform.py`, run in %prep; fails on upstream drift)
+
+| Id | Change |
+|---|---|
+| install.package, remove.package | openSUSE logo instead of Arch |
+| install.aur | label "Flathub" (all translations), package icon |
+| update.channel.rc, update.channel.edge | dropped (omageeko: Stable = pinned upstream, Dev = linked checkout) |
+
+## Vendor repositories (`overlay/share/repos.tsv` → /usr/share/omageeko/repos.tsv)
+
+Enabled on first use by `omarchy-pkg-add` for `@repo:<alias>:<rpm>` map targets: mise, google-chrome, microsoft-edge, vscode, brave, 1password, nordvpn, cursor, sublime-text.
 
 ## Path changes
 

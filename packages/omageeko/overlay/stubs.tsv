@@ -8,15 +8,15 @@ omarchy-provision-owner	n/a	Omarchy ISO first-boot flow; the Tumbleweed installe
 omarchy-provision-hardware	n/a	Omarchy image-build deferred hardware setup
 omarchy-dev-pkg-test	n/a	builds Arch packages; use the omageeko repo (layers/02 and packages/omageeko)
 omarchy-reinstall-pkgs	n/a	re-run the omageeko layer scripts instead
-omarchy-system-factory-reset	layer 06	needs a Tumbleweed snapper-based reset
-omarchy-hibernation-setup	layer 07	needs a Tumbleweed swap/resume setup (dracut + sdbootutil)
-omarchy-hibernation-remove	layer 07	needs a Tumbleweed swap/resume setup (dracut + sdbootutil)
-omarchy-hibernation-available	layer 07	needs a Tumbleweed swap/resume setup (dracut + sdbootutil)
-omarchy-plymouth-set	layer 06	needs the Tumbleweed plymouth/dracut flow
-omarchy-setup-security-sshd	layer 07	needs firewalld instead of ufw
-omarchy-remove-security-sshd	layer 07	needs firewalld instead of ufw
-omarchy-install-gaming-steam	layer 08	needs Tumbleweed Steam packages
-omarchy-install-gaming-retroarch	layer 08	needs Tumbleweed RetroArch packages
-omarchy-install-service-sunshine	layer 08	needs Tumbleweed Sunshine packages and firewalld
-omarchy-remove-service-sunshine	layer 08	needs Tumbleweed Sunshine packages and firewalld
-omarchy-install-openclaw-cli	layer 08	needs a Tumbleweed install path
+omarchy-system-factory-reset	layer 07	needs a Tumbleweed snapper-based reset
+omarchy-hibernation-setup	layer 08	needs a Tumbleweed swap/resume setup (dracut + sdbootutil)
+omarchy-hibernation-remove	layer 08	needs a Tumbleweed swap/resume setup (dracut + sdbootutil)
+omarchy-hibernation-available	layer 08	needs a Tumbleweed swap/resume setup (dracut + sdbootutil)
+omarchy-plymouth-set	layer 07	needs the Tumbleweed plymouth/dracut flow
+omarchy-setup-security-sshd	layer 08	needs firewalld instead of ufw
+omarchy-remove-security-sshd	layer 08	needs firewalld instead of ufw
+omarchy-install-gaming-steam	layer 06	needs Tumbleweed Steam packages
+omarchy-install-gaming-retroarch	layer 06	needs Tumbleweed RetroArch packages
+omarchy-install-service-sunshine	layer 06	needs Tumbleweed Sunshine packages and firewalld
+omarchy-remove-service-sunshine	layer 06	needs Tumbleweed Sunshine packages and firewalld
+omarchy-install-openclaw-cli	layer 06	needs a Tumbleweed install path

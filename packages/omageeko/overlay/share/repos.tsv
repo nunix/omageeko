@@ -1,0 +1,13 @@
+# omageeko: vendor RPM repositories omarchy-pkg-add enables on first use.
+# Referenced from packages.map as @repo:<alias>:<rpm>. GPG check stays on:
+# the key is imported before the repo is added.
+# <alias>	<baseurl>	<gpg key url>
+mise	https://mise.jdx.dev/rpm	https://mise.jdx.dev/gpg-key.pub
+google-chrome	https://dl.google.com/linux/chrome/rpm/stable/x86_64	https://dl.google.com/linux/linux_signing_key.pub
+microsoft-edge	https://packages.microsoft.com/yumrepos/edge	https://packages.microsoft.com/keys/microsoft.asc
+vscode	https://packages.microsoft.com/yumrepos/vscode	https://packages.microsoft.com/keys/microsoft.asc
+brave	https://brave-browser-rpm-release.s3.brave.com/x86_64	https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+1password	https://downloads.1password.com/linux/rpm/stable/x86_64	https://downloads.1password.com/linux/keys/1password.asc
+nordvpn	https://repo.nordvpn.com/yum/nordvpn/centos/x86_64	https://repo.nordvpn.com/gpg/nordvpn_public.asc
+cursor	https://downloads.cursor.com/yumrepo	https://downloads.cursor.com/keys/anysphere.asc
+sublime-text	https://download.sublimetext.com/rpm/stable/x86_64	https://download.sublimetext.com/sublimehq-rpm-pub.gpg

@@ -19,6 +19,7 @@ BuildArch:      noarch
 BuildRequires:  ImageMagick
 BuildRequires:  sudo
 BuildRequires:  patch
+BuildRequires:  python3
 Requires:       %{name}-settings = %{version}-%{release}
 Requires:       hyprland
 Requires:       quickshell
@@ -37,6 +38,8 @@ Requires:       jetbrains-mono-nerd-fonts
 # Implicit on Arch: omarchy-provision-user and notifications call these
 Requires:       xdg-user-dirs
 Requires:       libnotify-tools
+# omarchy-pkg-add installs Flathub apps where Tumbleweed has no package (omageeko's AUR stand-in)
+Requires:       flatpak
 # Scripts are run by Omarchy's own launchers; don't derive interpreter/module deps
 %global __requires_exclude_from ^%{_datadir}/omarchy/.*$
 
@@ -85,6 +88,8 @@ internal microphone) so Omarchy's audio panel can tell them apart.
 for p in %{_sourcedir}/patches/*.patch; do
   patch -p1 --fuzz=0 --no-backup-if-mismatch -i "$p"
 done
+# Menu: Tumbleweed labels/icons and dropped entries (fails on upstream drift)
+python3 %{_sourcedir}/menu-transform.py
 # Overlay: full replacements of Arch-coupled commands
 cp -f %{_sourcedir}/overlay/bin/* bin/
 # Stubs: keep upstream's omarchy: metadata so the CLI router still lists them
@@ -132,6 +137,7 @@ done
 install -Dm644 %{_sourcedir}/overlay/share/lib/pkg.sh %{buildroot}%{_datadir}/omageeko/lib/pkg.sh
 install -Dm644 %{_sourcedir}/pkgmap.tsv %{buildroot}%{_datadir}/omageeko/pkgmap.tsv
 install -Dm644 %{_sourcedir}/overlay/stubs.tsv %{buildroot}%{_datadir}/omageeko/stubs.tsv
+install -Dm644 %{_sourcedir}/overlay/share/repos.tsv %{buildroot}%{_datadir}/omageeko/repos.tsv
 echo "%{commit}" > %{buildroot}%{_datadir}/omageeko/upstream-commit
 
 # ---- omageeko-settings: mirrors pkgbuilds/omarchy-settings (Tumbleweed subset)

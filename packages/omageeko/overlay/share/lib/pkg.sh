@@ -4,11 +4,14 @@
 # omageeko's packages.map) and act through zypper or flatpak.
 
 OMAGEEKO_PKGMAP=${OMAGEEKO_PKGMAP:-/usr/share/omageeko/pkgmap.tsv}
+OMAGEEKO_REPOS=${OMAGEEKO_REPOS:-/usr/share/omageeko/repos.tsv}
 
 # omageeko_pkg_resolve <arch-name> : prints one target per line
-#   rpm:<name>      install/query with zypper/rpm
-#   flatpak:<id>    install/query with flatpak (Flathub)
-#   skip:<reason>   intentionally not available on omageeko
+#   rpm:<name>              install/query with zypper/rpm
+#   repo:<alias>:<name>     rpm from a vendor repo (repos.tsv), enabled on first use
+#   flatpak:<id>            install/query with flatpak (Flathub)
+#   none:                   nothing to install on Tumbleweed (counts as present)
+#   skip:<reason>           intentionally not available on omageeko
 # Names absent from the map are assumed to share the Arch name.
 omageeko_pkg_resolve() {
   local name=$1 target note
@@ -22,7 +25,9 @@ omageeko_pkg_resolve() {
     @flatpak:*) echo "flatpak:${target#@flatpak:}" ;;
     @build:*) echo "rpm:${target#@build:}" ;;
     @build) echo "rpm:$name" ;;
+    @repo:*:*) echo "repo:${target#@repo:}" ;;
     @repo:*) echo "rpm:$name" ;;
+    @none) echo "none:" ;;
     *) tr ',' '\n' <<<"$target" | sed 's/^/rpm:/' ;;
   esac
 }
@@ -37,11 +42,28 @@ omageeko_pkg_installed() {
   while read -r target; do
     case "$target" in
       rpm:*) rpm -q --whatprovides -- "${target#rpm:}" &>/dev/null || return 1 ;;
+      repo:*) rpm -q --whatprovides -- "${target##*:}" &>/dev/null || return 1 ;;
       flatpak:*) omageeko_flatpak_installed "${target#flatpak:}" || return 1 ;;
+      none:*) ;;
       skip:*) return 1 ;;
     esac
   done < <(omageeko_pkg_resolve "$1")
   return 0
+}
+
+# omageeko_repo_enable <alias> : add a vendor repo from repos.tsv (key first, GPG check on)
+omageeko_repo_enable() {
+  local alias=$1 url key
+  zypper lr "$alias" &>/dev/null && return 0
+  read -r url key < <(awk -F'\t' -v a="$alias" '$1 == a { print $2, $3; exit }' "$OMAGEEKO_REPOS")
+  if [[ -z $url ]]; then
+    echo "omageeko: unknown vendor repo '$alias' (not in $OMAGEEKO_REPOS)" >&2
+    return 1
+  fi
+  echo "Adding vendor repository $alias ($url)"
+  omageeko_sudo rpm --import "$key" || return 1
+  omageeko_sudo zypper --non-interactive addrepo --refresh --priority 95 "$url" "$alias" || return 1
+  omageeko_sudo zypper --non-interactive refresh "$alias"
 }
 
 # omageeko_sudo <cmd...> : run as root (directly when already root)

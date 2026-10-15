@@ -1,6 +1,8 @@
 # omageeko package map: upstream install/omarchy-base.packages -> Tumbleweed
 # Format: <arch-name> <layer> <tw-packages,comma,separated | @build | @flatpak:<id> | @repo:<alias> | -> [# note]
-#   layer  = omageeko layer that installs it (01 base, 02 build, 04 session, 05 shell, 06 login-boot, 07 system, 08 apps)
+#   layer  = omageeko layer that installs it (01 base, 02 build, 04 session, 05 hardware, 06 shell, 07 login-boot, 08 system, 09 apps)
+#   @repo:<alias>:<rpm> = vendor RPM repo from packages/omageeko/overlay/share/repos.tsv (enabled on first use)
+#   @none  = nothing to install on Tumbleweed (treated as present)
 #   @build = RPM built from packages/<name> (@build:<rpm> when the RPM name differs from the Arch name)
 #   -      = intentionally skipped (reason in note); a "-" layer with a real target is
 #            not installed by any layer but still translated for omarchy-pkg-add
@@ -38,7 +40,7 @@ git                    01 git
 fakeroot               01 fakeroot
 dosfstools             01 dosfstools
 exfatprogs             01 exfatprogs
-mise-bin               01 @repo:mise                       # https://mise.jdx.dev/rpm (upstream RPM repo)
+mise-bin               01 @repo:mise:mise                       # https://mise.jdx.dev/rpm (upstream RPM repo)
 usage                  -  -                                # not in the mise RPM repo; per-user: `mise use -g usage`
 inetutils              01 hostname                         # only hostname is used; telnet/ftp not needed
 lua51                  01 luajit                           # neovim uses LuaJIT (5.1 ABI)
@@ -104,21 +106,21 @@ owe                    02 @build                           # video wallpaper eng
 owe-lockfeed           02 @build
 omarchy-hyprland-titlebars 02 @build                       # Hyprland plugin, needs hyprland-devel == 0.56.2
 hyprland-preview-share-picker 02 @build
-omasnap                08 @build                           # screenshot editor
-aether                 08 @build                           # theming tool (Go)
-gliff                  08 @build                           # Rust
-herdr                  08 @build                           # Rust
+omasnap                09 @build                           # screenshot editor
+aether                 09 @build                           # theming tool (Go)
+gliff                  09 @build                           # Rust
+herdr                  09 @build                           # Rust
 ttfx                   02 @build                           # Rust
-omacalc                08 @build
-omacut                 08 @build
-omawrite               08 @build
-signed                 08 @build
-hype                   08 @build
-monologue              08 @build
-cliamp                 08 @build
-disktree-bin           08 @build
-tobi-try               08 @build
-tzupdate               08 @build
+omacalc                09 @build
+omacut                 09 @build
+omawrite               09 @build
+signed                 09 @build
+hype                   09 @build
+monologue              09 @build
+cliamp                 09 @build
+disktree-bin           09 @build
+tobi-try               09 @build
+tzupdate               09 @build
 
 # --- 04: session
 uwsm                   04 uwsm
@@ -132,24 +134,24 @@ qt6-multimedia         05 qt6-multimedia-imports
 qt6-wayland            05 qt6-wayland
 qt6-imageformats       05 qt6-imageformats
 
-# --- 06: login and boot
-plymouth               06 plymouth                         # already installed; Omarchy theme in layer 06
+# --- 07: login and boot
+plymouth               07 plymouth                         # already installed; Omarchy theme in layer 06
 sddm                   -  -                                # decision: keep lightdm
 
-# --- 07: system services
+# --- 08: system services
 power-profiles-daemon  05 power-profiles-daemon
 bluez                  05 bluez
 bluez-tools            05 @build                                # bt-agent for Omarchy's pairing agent; not in TW (NOT part of bluez)
 bluez-utils            -  -                                # TW's bluez ships the CLI tools
-bolt                   07 bolt
-cups                   07 cups
-cups-filters           07 cups-filters
-cups-pk-helper         07 cups-pk-helper
-system-config-printer  07 system-config-printer
-avahi                  07 avahi
-nss-mdns               07 nss-mdns
-networkmanager         07 NetworkManager                   # already installed
-wireless-regdb         07 wireless-regdb
+bolt                   08 bolt
+cups                   08 cups
+cups-filters           08 cups-filters
+cups-pk-helper         08 cups-pk-helper
+system-config-printer  08 system-config-printer
+avahi                  08 avahi
+nss-mdns               08 nss-mdns
+networkmanager         08 NetworkManager                   # already installed
+wireless-regdb         08 wireless-regdb
 fcitx5                 04 fcitx5
 fcitx5-chewing         04 fcitx5-chewing
 fcitx5-chinese-addons  04 fcitx5-chinese-addons
@@ -157,12 +159,12 @@ fcitx5-hangul          04 fcitx5-hangul
 fcitx5-mozc            04 fcitx5-mozc
 fcitx5-gtk             04 fcitx5-gtk3,fcitx5-gtk4
 fcitx5-qt              04 fcitx5-qt6
-docker                 07 podman-docker                    # decision: podman; docker CLI compatibility shim
-docker-compose         07 docker-compose                   # `podman compose` delegates to it via podman.socket
+docker                 08 podman-docker                    # decision: podman; docker CLI compatibility shim
+docker-compose         08 docker-compose                   # `podman compose` delegates to it via podman.socket
 docker-buildx          -  -                                # podman build covers it
-ufw                    07 firewalld                        # TW default firewall
+ufw                    08 firewalld                        # TW default firewall
 ufw-docker             -  -                                # firewalld + podman don't need it
-qemu-user-static-binfmt 07 qemu-linux-user                 # cross-arch containers
+qemu-user-static-binfmt 08 qemu-linux-user                 # cross-arch containers
 
 # --- 05: hardware (names Omarchy's install/hardware scripts and setup commands pass to omarchy-pkg-add)
 libfprint-git          05 libfprint-2-2                    # Arch tracks libfprint git; TW's release supports this Goodix 27c6:6594
@@ -173,22 +175,22 @@ vulkan-radeon          05 libvulkan_radeon
 vulkan-intel           -  libvulkan_intel                  # not this hardware; mapped for completeness
 lsp-plugins-lv2        -  lsp-plugins                      # speaker tunings (no tuning for this laptop)
 
-# --- 08: applications
+# --- 09: applications
 chromium               04 chromium                         # default browser + web apps; omarchy-provision-user sets it
-nautilus               08 nautilus
-nautilus-python        08 python313-nautilus
-sushi                  08 sushi
-gnome-disk-utility     08 gnome-disk-utility
-evince                 08 evince
-mpv                    08 mpv
-mpv-mpris              08 mpv-mpris
-imv                    08 imv
-pinta                  08 pinta
-libreoffice-fresh      08 libreoffice
-moonlight-qt           08 moonlight
-localsend              08 @flatpak:org.localsend.localsend_app
-obsidian               08 @flatpak:md.obsidian.Obsidian
-omarchy-nvim           08 @build                           # LazyVim preset; may become a user-config step
+nautilus               09 nautilus
+nautilus-python        09 python313-nautilus
+sushi                  09 sushi
+gnome-disk-utility     09 gnome-disk-utility
+evince                 09 evince
+mpv                    09 mpv
+mpv-mpris              09 mpv-mpris
+imv                    09 imv
+pinta                  09 pinta
+libreoffice-fresh      09 libreoffice
+moonlight-qt           09 moonlight
+localsend              09 @flatpak:org.localsend.localsend_app
+obsidian               09 @flatpak:md.obsidian.Obsidian
+omarchy-nvim           09 @build                           # LazyVim preset; may become a user-config step
 
 # --- skipped: Arch-only or replaced
 base-devel             -  -                                # toolchains live in the builder container
@@ -199,3 +201,65 @@ kernel-modules-hook    -  -                                # Arch kernel-upgrade
 asdcontrol             -  -                                # Apple Studio Display brightness; not relevant on this hardware
 dotnet-runtime         -  -                                # Arch pinta dependency; TW pinta brings its own
 superwhisper-bin       -  -                                # proprietary dictation; revisit as optional
+
+# --- 06a: names used by Omarchy's Install/Remove menus and omarchy-install-* commands
+# All on demand (layer "-"): translated for omarchy-pkg-add, never installed up front.
+# Proprietary apps: vendor RPM repo where one exists, else Flathub (user decision 2026-10-15).
+google-chrome          -  @repo:google-chrome:google-chrome-stable
+microsoft-edge-stable-bin -  @repo:microsoft-edge:microsoft-edge-stable
+brave-bin              -  @repo:brave:brave-browser
+brave-origin-bin       -  @repo:brave:brave-origin
+visual-studio-code-bin -  @repo:vscode:code
+cursor-bin             -  @repo:cursor:cursor
+sublime-text-4         -  @repo:sublime-text:sublime-text
+1password              -  @repo:1password:1password
+1password-cli          -  @repo:1password:1password-cli
+nordvpn-bin            -  @repo:nordvpn:nordvpn
+zen-browser-bin        -  @flatpak:app.zen_browser.zen
+spotify                -  @flatpak:com.spotify.Client
+signal-desktop         -  @flatpak:org.signal.Signal
+slack-desktop          -  @flatpak:com.slack.Slack
+dropbox                -  @flatpak:com.dropbox.Client
+nautilus-dropbox       -  @none                            # Flathub Dropbox has no Nautilus extension
+heroic-games-launcher-bin -  @flatpak:com.heroicgameslauncher.hgl
+minecraft-launcher     -  @flatpak:com.mojang.Minecraft
+zed                    -  @flatpak:dev.zed.Zed
+bitwarden              -  bitwarden                        # native on TW
+bitwarden-cli          -  @none                            # not on TW/Flathub; `mise use -g npm:@bitwarden/cli` if needed
+# Same software, Tumbleweed names
+firefox                -  MozillaFirefox
+php                    -  php8
+php-sqlite             -  php8-sqlite
+xdebug                 -  php8-xdebug
+composer               -  php-composer2
+ollama-cuda            -  ollama                           # TW builds one ollama package
+ollama-rocm            -  ollama
+libfido2               -  libfido2-1,libfido2-utils
+pam-u2f                -  pam_u2f
+libfprint              -  libfprint-2-2
+python-protobuf        -  python313-protobuf
+python-gpgme           -  python313-gpg
+libappindicator-gtk3   -  libappindicator3-1
+xpadneo-dkms           -  xpadneo
+umu-launcher           -  @none                            # Lutris on TW fetches its own umu runtime
+# Nerd fonts for Install > Style > Font: local RPMs (packages/nerd-fonts-extra)
+ttf-cascadia-mono-nerd -  @build:cascadia-mono-nerd-fonts
+ttf-meslo-nerd         -  @build:meslo-nerd-fonts
+ttf-firacode-nerd      -  @build:firacode-nerd-fonts
+ttf-victor-mono-nerd   -  @build:victor-mono-nerd-fonts
+ttf-bitstream-vera-mono-nerd -  @build:bitstream-vera-mono-nerd-fonts
+ttf-iosevka-nerd       -  @build:iosevka-nerd-fonts
+# Omarchy/AUR repackages not ported yet: the install says so instead of failing in zypper
+claude-desktop         -  -                                # not ported yet (omarchy-pkgs repackage)
+openai-codex-desktop   -  -                                # not ported yet (omarchy-pkgs repackage)
+hermes-desktop         -  -                                # not ported yet (omarchy-pkgs repackage)
+t3code-bin             -  -                                # not ported yet (omarchy-pkgs repackage)
+grok-bot               -  -                                # not ported yet (omarchy-pkgs repackage)
+perplexity             -  -                                # not ported yet (omarchy-pkgs repackage)
+once-bin               -  -                                # not ported yet (omarchy-pkgs repackage)
+openclaw               -  -                                # not ported yet (omarchy-pkgs repackage)
+lmstudio-bin           -  -                                # not ported yet: AppImage only (no repo/Flathub)
+omazed                 -  -                                # not ported yet (Omarchy Zed config package)
+omarchy-emacs          -  -                                # not ported yet (Omarchy Emacs config package)
+voxtype-bin            -  -                                # not ported yet (dictation, omarchy-pkgs)
+symfony-cli            -  -                                # not ported yet (vendor binary)

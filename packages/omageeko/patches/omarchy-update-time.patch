@@ -1,0 +1,15 @@
+--- a/bin/omarchy-update-time	2026-10-15 09:14:44.346685177 +0200
++++ b/bin/omarchy-update-time	2026-10-15 09:14:44.357644695 +0200
+@@ -4,4 +4,11 @@
+ # omarchy:requires-sudo=true
+ 
+ echo "Updating time..."
+-sudo systemctl restart systemd-timesyncd
++# omageeko: Tumbleweed syncs time with chrony; force an immediate step after restarting it
++if systemctl is-active --quiet chronyd; then
++  sudo systemctl restart chronyd
++  sudo chronyc -a waitsync 10 0.1 >/dev/null 2>&1 || true
++  sudo chronyc -a makestep
++else
++  sudo systemctl restart systemd-timesyncd
++fi

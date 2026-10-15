@@ -15,7 +15,13 @@ for pkg in "$@"; do
   while read -r target; do
     case "$target" in
       rpm:*) rpms+=("${target#rpm:}") ;;
+      repo:*)
+        repo=${target#repo:}
+        omageeko_repo_enable "${repo%%:*}" || exit 1
+        rpms+=("${repo#*:}")
+        ;;
       flatpak:*) flatpaks+=("${target#flatpak:}") ;;
+      none:*) ;;
       skip:*)
         echo -e "\033[31mError: Package '$pkg' is not available on omageeko (${target#skip:})\033[0m" >&2
         exit 1
