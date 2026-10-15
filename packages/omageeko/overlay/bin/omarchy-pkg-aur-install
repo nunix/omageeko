@@ -25,5 +25,8 @@ app_ids=$(flatpak remote-ls --system --app --columns=application,name flathub | 
 
 if [[ -n $app_ids ]]; then
   echo "$app_ids" | tr '\n' ' ' | xargs sudo flatpak install --system --noninteractive flathub
-  omarchy-show-done $?
+  status=$?
+  source /usr/share/omageeko/lib/pkg.sh
+  omageeko_flatpak_session_env
+  omarchy-show-done $status
 fi

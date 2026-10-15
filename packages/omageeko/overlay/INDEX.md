@@ -54,6 +54,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | shell agents Main.qml | strip `google/`/`vertex/`/`anthropic/` prefixes and `@YYYYMMDD` from model names |
 | shell agents Panel.qml | estimated-spend text for agents without prepaid credit |
 | shell monitor Panel.qml + default/hypr/toggles.lua | displays switched off in the panel stay off for the session (`$XDG_RUNTIME_DIR/omarchy-disabled-monitors`) |
+| omarchy-default-browser | `brave` checks for the `brave-browser` command (Brave's RPM; Arch's brave-bin ships `brave`), so Setup › Defaults › Browser › Brave no longer opens an install terminal |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 
 ## Added files (`overlay/share/`)
@@ -66,7 +67,8 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | `/usr/bin/omageeko-monitor-wake-kick` + user unit (omageeko-hardware) | re-wake monitors listed in `~/.config/omageeko/monitor-wake-kick` with a DPMS cycle when they reconnect after deep standby (Odyssey G9 quirk) |
 | `/usr/bin/omageeko-box` | apps from Omarchy's Arch repo in the `omageeko-arch` distrobox (`@box:` map targets) |
 | `/usr/libexec/omageeko/bt-device-privacy` + `omageeko-bt-device-privacy.{service,timer}` (omageeko-hardware) | Device Privacy Mode (flag 0x02) for bonded BLE devices, so peers advertising from their identity address (MX mice) can reconnect with ll-privacy on |
-| `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports |
+| `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports; `omageeko_flatpak_session_env` pushes Flatpak's export dirs into the running session after a Flatpak install (pkg-add, pkg-aur-install) |
+| `/usr/share/uwsm/env.d/20-omageeko-flatpak` (omageeko-session) | Flatpak export dirs in every session's XDG_DATA_DIRS: TW's profile.d/flatpak.sh is skipped when the login already read /etc/profile, or absent until flatpak is installed. Without it, Flatpak URL handlers (slack:// after a browser login) give "no apps available" |
 
 ## Menu edits (`menu-transform.py`, run in %prep; fails on upstream drift)
 

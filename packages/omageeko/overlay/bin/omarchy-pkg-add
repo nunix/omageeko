@@ -39,6 +39,7 @@ fi
 if (( ${#flatpaks[@]} )); then
   omageeko_sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || exit 1
   omageeko_sudo flatpak install --system --noninteractive flathub "${flatpaks[@]}" || exit 1
+  omageeko_flatpak_session_env
 fi
 
 if (( ${#boxes[@]} )); then

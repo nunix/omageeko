@@ -233,6 +233,7 @@ install -m755 bin/omarchy-upload-log bin/omarchy-debug bin/omarchy-debug-idle %{
 # Upstream installs the session to /usr/local/share for sddm; lightdm reads /usr/share
 install -Dm644 default/wayland-sessions/omarchy.desktop %{buildroot}%{_datadir}/wayland-sessions/omarchy.desktop
 install -Dm644 default/uwsm/env.d/10-omarchy %{buildroot}%{_datadir}/uwsm/env.d/10-omarchy
+install -Dm644 %{_sourcedir}/overlay/share/uwsm/20-omageeko-flatpak %{buildroot}%{_datadir}/uwsm/env.d/20-omageeko-flatpak
 install -Dm644 etc/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf \
   %{buildroot}%{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
 
@@ -320,6 +321,7 @@ done
 %{_datadir}/wayland-sessions/omarchy.desktop
 %dir %{_datadir}/uwsm/env.d
 %{_datadir}/uwsm/env.d/10-omarchy
+%{_datadir}/uwsm/env.d/20-omageeko-flatpak
 %dir %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d
 %config %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
 

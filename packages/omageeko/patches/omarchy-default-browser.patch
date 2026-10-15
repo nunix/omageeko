@@ -1,0 +1,12 @@
+--- a/bin/omarchy-default-browser	2026-10-15 20:43:29.286565388 +0200
++++ b/bin/omarchy-default-browser	2026-10-15 20:43:29.307820986 +0200
+@@ -28,7 +28,8 @@
+ case "$1" in
+ chromium) browser="chromium"; command="chromium"; desktop_id="chromium.desktop"; name="Chromium"; glyph= ;;
+ chrome) browser="chrome"; command="google-chrome-stable"; desktop_id="google-chrome.desktop"; name="Chrome"; glyph=󰊯 ;;
+-brave) browser="brave"; command="brave"; desktop_id="brave-browser.desktop"; name="Brave"; glyph=󰖟 ;;
++# omageeko: Brave's RPM installs brave-browser (Arch's brave-bin installs brave)
++brave) browser="brave"; command="brave-browser"; desktop_id="brave-browser.desktop"; name="Brave"; glyph=󰖟 ;;
+ brave-origin) browser="brave-origin"; command="brave-origin"; desktop_id="brave-origin.desktop"; name="Brave Origin"; glyph=󰖟 ;;
+ edge) browser="edge"; command="microsoft-edge-stable"; desktop_id="microsoft-edge.desktop"; name="Edge"; glyph=󰇩 ;;
+ firefox) browser="firefox"; command="firefox"; desktop_id="firefox.desktop"; name="Firefox"; glyph=󰈹 ;;

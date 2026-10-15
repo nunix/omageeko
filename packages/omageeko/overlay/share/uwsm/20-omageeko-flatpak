@@ -1,0 +1,13 @@
+# omageeko: Flatpak's export dirs must be in XDG_DATA_DIRS for launchers and
+# xdg-open to see Flatpak apps and their URL handlers (e.g. slack:// after a
+# browser login). Tumbleweed adds them in /etc/profile.d/flatpak.sh, which only
+# exists once flatpak is installed and is skipped when the login environment
+# already read /etc/profile (PROFILEREAD). Add them here unconditionally.
+for __omageeko_dir__ in /var/lib/flatpak/exports/share "${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share"; do
+  case ":${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:" in
+  *":$__omageeko_dir__:"*) ;;
+  *) XDG_DATA_DIRS="$__omageeko_dir__:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" ;;
+  esac
+done
+unset __omageeko_dir__
+export XDG_DATA_DIRS

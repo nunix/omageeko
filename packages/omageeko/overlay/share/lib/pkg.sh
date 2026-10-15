@@ -83,3 +83,22 @@ omageeko_installed_names() {
   rpm -qa --qf '%{NAME}\n'
   command -v flatpak &>/dev/null && flatpak list --app --columns=application 2>/dev/null
 }
+
+# omageeko_flatpak_session_env : after a Flatpak install, put the export dirs
+# into the running session (systemd user manager, D-Bus activation, Hyprland),
+# so the new app and its URL handlers work without logging out. New sessions
+# get them from /usr/share/uwsm/env.d/20-omageeko-flatpak.
+omageeko_flatpak_session_env() {
+  local dirs dir
+  dirs=$(systemctl --user show-environment 2>/dev/null | sed -n 's/^XDG_DATA_DIRS=//p')
+  dirs=${dirs:-/usr/local/share:/usr/share}
+  for dir in /var/lib/flatpak/exports/share "${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share"; do
+    [[ ":$dirs:" == *":$dir:"* ]] || dirs="$dir:$dirs"
+  done
+  systemctl --user set-environment XDG_DATA_DIRS="$dirs" 2>/dev/null
+  dbus-update-activation-environment XDG_DATA_DIRS="$dirs" 2>/dev/null
+  if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+    hyprctl eval "hl.env(\"XDG_DATA_DIRS\", \"$dirs\")" >/dev/null 2>&1
+  fi
+  return 0
+}
