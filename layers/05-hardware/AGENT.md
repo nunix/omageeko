@@ -20,7 +20,10 @@ Make the laptop hardware work the Omarchy way:
   - Copy `/usr/lib/pam.d/{sudo,polkit-1}` to `/etc/pam.d` before editing (TW ships vendor stacks in `/usr/lib/pam.d`).
   - The created polkit stack includes `common-{auth,account,password,session}`.
   - Packages go through `omarchy-pkg-add` (`libfprint-git` maps to `libfprint-2-2`), plus `fprintd-pam`, which TW splits out.
+  - **Scope (user decision 2026-10-15): the fingerprint unlocks the lock screen only.** By default the command enrolls, verifies and runs `omarchy-apply-lock` (creating `/etc/pam.d/omarchy-lock-fingerprint`), but skips the sudo/polkit PAM edits. `--all` restores upstream's sudo + polkit + lock setup. lightdm's first login stays password-only, which is also what unlocks the GNOME keyring.
+  - The user's sudo is `NOPASSWD`, so sudo never runs PAM auth either way. The scope keeps polkit prompts and any non-NOPASSWD use password-only.
   - Removed from `stubs.tsv`.
+- **Patch `omarchy-remove-security-fingerprint`:** guard the `/etc/pam.d/sudo` grep (the file exists on TW only after `--all`).
 - **`omageeko-hardware`** ships `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf`. UCM laptop nodes otherwise take `node.nick` from the codec PCM name ("ALC257 Analog") for both the headphone jack and the headset mic, and Omarchy's audio panel labels rows by `node.nick`. The rule names `HiFi__Headphones/Speaker/Mic1/Mic2` nodes "Headphones (jack)", "Laptop speakers", "Laptop microphone" and "Headset mic (jack)".
 - TW's alsa-ucm-conf exposes Speaker and Headphones as **separate card profiles**. While the jack is plugged, only the Headphones sink exists, and unplugging switches back to the speaker. That's expected UCM behaviour, not a bug.
 
@@ -33,6 +36,7 @@ Make the laptop hardware work the Omarchy way:
 - ppd active with performance/balanced/power-saver profiles
 - the audio node nicks (no codec names)
 - that the lock PAM file exists and its includes resolve on TW, and that fprintd sees the reader
+- that sudo/polkit/common-auth don't use pam_fprintd (lock-screen-only policy)
 - the AMD Vulkan driver
 
 Fingerprint enrollment is reported as info until done.

@@ -1,0 +1,12 @@
+--- a/bin/omarchy-remove-security-fingerprint	2026-10-15 08:44:18.836561028 +0200
++++ b/bin/omarchy-remove-security-fingerprint	2026-10-15 08:44:18.845299076 +0200
+@@ -24,7 +24,8 @@
+ 
+ remove_pam_config() {
+   # Remove from sudo (both the fingerprint module and its clamshell gate)
+-  if grep -Eq 'pam_fprintd\.so|omarchy-hw-laptop-closed' /etc/pam.d/sudo; then
++  # omageeko: on Tumbleweed /etc/pam.d/sudo only exists if setup ran with --all
++  if [[ -f /etc/pam.d/sudo ]] && grep -Eq 'pam_fprintd\.so|omarchy-hw-laptop-closed' /etc/pam.d/sudo; then
+     echo "Removing fingerprint authentication from sudo..."
+     sudo sed -i -e '/pam_fprintd\.so/d' -e '/omarchy-hw-laptop-closed/d' /etc/pam.d/sudo
+   fi

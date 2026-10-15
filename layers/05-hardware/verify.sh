@@ -43,6 +43,10 @@ fi
 check "fingerprint reader seen by fprintd" bash -c 'fprintd-list "$USER" 2>&1 | grep -q "found 1 devices"'
 if [[ -f /etc/pam.d/omarchy-lock-fingerprint ]]; then ok "fingerprint enrolled and wired into PAM"; else info "fingerprint not set up yet: run omarchy-setup-security-fingerprint"; fi
 
+# omageeko policy: fingerprint unlocks the lock screen only; sudo/polkit stay password-only
+fp_in_auth=$(grep -ls pam_fprintd /etc/pam.d/sudo /etc/pam.d/polkit-1 /etc/pam.d/common-auth 2>/dev/null)
+if [[ -z $fp_in_auth ]]; then ok "fingerprint not used by sudo/polkit/common-auth (lock screen only)"; else bad "pam_fprintd found in: $fp_in_auth (omageeko keeps sudo/polkit password-only)"; fi
+
 check "AMD Vulkan driver" rpm -q libvulkan_radeon
 
 exit $fail

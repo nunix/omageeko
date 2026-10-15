@@ -10,7 +10,7 @@ Status: **installed and verified 2026-10-15** (snapper pair 75..80). Waiting on 
 | HDMI/DP outputs (dock, 2 monitors) | labelled by monitor name, fine |
 | Bluetooth | bluez was missing entirely. Installed, controller up. After the reboot, pairing looped: `bt-agent` (bluez-tools) was missing, so there was no pairing agent. Built bluez-tools; MX Master 3S re-paired and is stable |
 | Power profiles | ppd was missing. performance/balanced/power-saver available (amd-pstate active) |
-| Fingerprint (Goodix 27c6:6594) | supported by TW libfprint 1.94.10; fprintd sees it; enrollment pending |
+| Fingerprint (Goodix 27c6:6594) | supported by TW libfprint 1.94.10; fprintd sees it. Scope: lock screen only (user decision); enrollment pending |
 | Lock screen | was refusing to lock (no PAM stack). Fixed, pam_unix path verified |
 | Input method (fcitx5) | omarchy-fcitx5.service was crash-looping (fcitx5 missing). Fixed in layer 04 |
 | Keyboard backlight, mute/micmute LEDs, brightness, cameras, Wi-Fi, s2idle | present |

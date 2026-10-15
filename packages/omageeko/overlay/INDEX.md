@@ -41,7 +41,8 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-debug | package info from rpm |
 | omarchy-upload-log | package list from rpm |
 | omarchy-apply-lock | lock PAM `account include common-account` (TW has no system-local-login) |
-| omarchy-setup-security-fingerprint | copy /usr/lib/pam.d/{sudo,polkit-1} to /etc before editing; polkit stack includes common-*; packages via omarchy-pkg-add (+fprintd-pam) |
+| omarchy-setup-security-fingerprint | lock-screen-only by default (`--all` = upstream sudo+polkit+lock); for `--all`, copy /usr/lib/pam.d/{sudo,polkit-1} to /etc before editing; polkit stack includes common-*; packages via omarchy-pkg-add (+fprintd-pam) |
+| omarchy-remove-security-fingerprint | guard the /etc/pam.d/sudo grep (only exists after --all) |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 
 ## Added files (`overlay/share/`)

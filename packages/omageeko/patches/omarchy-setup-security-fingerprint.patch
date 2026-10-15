@@ -1,6 +1,14 @@
---- a/bin/omarchy-setup-security-fingerprint	2026-10-15 08:08:37.417656148 +0200
-+++ b/bin/omarchy-setup-security-fingerprint	2026-10-15 08:08:53.006915615 +0200
-@@ -18,6 +18,15 @@
+--- a/bin/omarchy-setup-security-fingerprint	2026-10-15 08:43:59.276485865 +0200
++++ b/bin/omarchy-setup-security-fingerprint	2026-10-15 08:44:08.848900018 +0200
+@@ -1,6 +1,7 @@
+ #!/bin/bash
+ 
+ # omarchy:summary=Set up fingerprint authentication for sudo, polkit, and lock screen
++# omarchy:args=[--all]
+ # omarchy:requires-sudo=true
+ 
+ set -e
+@@ -18,6 +19,15 @@
    # $OMARCHY_PATH trees but leaves /usr/bin untouched.
    local fprintd_gate="auth      [success=1 default=ignore] pam_exec.so quiet /usr/bin/omarchy-hw-laptop-closed"
  
@@ -16,7 +24,7 @@
    # Configure sudo
    if ! grep -q pam_fprintd.so /etc/pam.d/sudo; then
      echo "Configuring sudo for fingerprint authentication..."
-@@ -47,11 +56,11 @@
+@@ -47,15 +57,22 @@
      sudo tee /etc/pam.d/polkit-1 >/dev/null <<EOF
  $fprintd_gate
  auth      sufficient pam_fprintd.so
@@ -32,7 +40,18 @@
  EOF
    fi
  }
-@@ -68,9 +77,10 @@
+ 
++# omageeko: by default the fingerprint only unlocks the lock screen; sudo and
++# polkit stay password-only. --all restores upstream's sudo + polkit + lock setup.
++scope=lock
++if [[ ${1:-} == "--all" ]]; then
++  scope=all
++fi
++
+ echo -e "\e[32mSetting up fingerprint scanner for authentication.\n\e[0m"
+ 
+ # Bail before installing anything if there's no reader to talk to.
+@@ -68,9 +85,10 @@
  # needs a pin bump in omarchy-pkgs. It conflicts with stock libfprint, and
  # --noconfirm answers that prompt with N; --ask 4 accepts the replacement in
  # one transaction, so a failed install leaves the existing driver in place.
@@ -45,3 +64,26 @@
  fi
  
  # Enroll first fingerprint
+@@ -88,14 +106,20 @@
+     # sensor outside the elanmoc table gets this far and then fails to enroll.
+     # Editing the stacks up front would leave those machines pointing at
+     # pam_fprintd with nothing to match.
+-    setup_pam_config
++    if [[ $scope == "all" ]]; then
++      setup_pam_config
++    fi
+     "$OMARCHY_PATH/bin/omarchy-apply-lock"
+     if [[ ! -f /etc/pam.d/omarchy-lock-fingerprint ]]; then
+       echo "Fingerprint enrollment succeeded, but lock-screen configuration could not be confirmed. Run omarchy-apply-lock and try again." >&2
+       exit 1
+     fi
+     echo -e "\e[32m\nPerfect! Fingerprint authentication is now configured.\e[0m"
+-    echo "You can use your fingerprint for sudo, polkit, and lock screen (Super + Ctrl + L)."
++    if [[ $scope == "all" ]]; then
++      echo "You can use your fingerprint for sudo, polkit, and lock screen (Super + Ctrl + L)."
++    else
++      echo "You can use your fingerprint to unlock the lock screen (Super + Ctrl + L). sudo and polkit stay password-only (--all to include them)."
++    fi
+   else
+     echo -e "\e[31m\nVerification failed. You may want to try enrolling again.\e[0m"
+   fi
