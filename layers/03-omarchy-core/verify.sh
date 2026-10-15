@@ -35,6 +35,14 @@ for f in /usr/bin/omarchy-*; do
 done
 if (( ${#leftover[@]} == 0 )); then ok "no command invokes pacman/yay/limine/mkinitcpio/ufw"; else bad "Arch tooling still invoked by: ${leftover[*]} (port or stub them)"; fi
 
+# The installed name map must match packages.map (prepare.sh regenerates it on every build)
+"$OMAGEEKO_ROOT/packages/omageeko/prepare.sh"
+if cmp -s "$OMAGEEKO_ROOT/packages/omageeko/pkgmap.tsv" /usr/share/omageeko/pkgmap.tsv; then
+  ok "installed pkgmap.tsv matches packages.map"
+else
+  bad "installed pkgmap.tsv is stale vs packages.map: rebuild omageeko (any layer 03+ install.sh)"
+fi
+
 # Package primitives translate Arch names
 check "pkg-present jq" omarchy-pkg-present jq
 check "pkg-present via map (noto-fonts-emoji, tldr)" omarchy-pkg-present noto-fonts-emoji tldr

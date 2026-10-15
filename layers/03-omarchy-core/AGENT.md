@@ -23,10 +23,9 @@ Install upstream Omarchy at the commit pinned in `upstream.lock`, laid out exact
 
 `%prep` applies `patches/*.patch` with `--fuzz=0` (fails loudly on upstream drift). It then copies `overlay/bin/*` over `bin/` and generates stubs from `overlay/stubs.tsv`. Stubs keep upstream's `# omarchy:` metadata, so the `omarchy` CLI router still lists them, and exit 1 with a reason. `%check` fails if a touched command still invokes pacman/yay/expac/paccache/checkupdates as a command.
 
-`layers/03-omarchy-core/install.sh`:
-1. Syncs `%global commit/commit_date/upstream_release` in the spec from `upstream.lock`.
-2. Generates `packages/omageeko/pkgmap.tsv` (`<arch>\t<target>\t<note>`) from `packages.map` (gitignored, but part of the build stamp).
-3. Runs `check_builder_snapshot` and `build_packages omageeko`, then `install_local_rpms omageeko omageeko-settings` in a snapper pair.
+`packages/omageeko/prepare.sh` generates the spec's inputs: it syncs `%global commit/commit_date/upstream_release` from `upstream.lock` and writes `packages/omageeko/pkgmap.tsv` (`<arch>\t<target>\t<note>`, gitignored) from `packages.map`. `build_packages` runs any `packages/<name>/prepare.sh` **before** computing the stamp, so every layer that builds omageeko (03, 04, 05, …) ships a current map. Generating it in one layer's script once left a stale map installed when later layers rebuilt. `verify.sh` compares the installed map with `packages.map`.
+
+`layers/03-omarchy-core/install.sh` runs `check_builder_snapshot` and `build_packages omageeko`, then `install_local_rpms omageeko omageeko-settings` in a snapper pair.
 
 The build/stamp/install helpers are shared in `lib/common.sh`.
 

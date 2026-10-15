@@ -142,6 +142,10 @@ build_packages() {
   for name in "$@"; do
     spec="packages/$name/$name.spec"
     [[ -f $OMAGEEKO_ROOT/$spec ]] || die "Missing spec: $spec"
+    # Optional generated inputs (e.g. omageeko's pkgmap.tsv), refreshed before stamping
+    if [[ -x $OMAGEEKO_ROOT/packages/$name/prepare.sh ]]; then
+      "$OMAGEEKO_ROOT/packages/$name/prepare.sh" || die "prepare.sh failed for $name"
+    fi
     stamp=$(package_stamp "$name")
     if needs_build "$name" "$stamp"; then
       log "Building $name"
