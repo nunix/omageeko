@@ -19,6 +19,7 @@ if systemctl --user is-active --quiet graphical-session.target; then
 else
   info "not in the uwsm session: bt-agent.service starts with graphical-session.target"
 fi
+check "BLE Device Privacy Mode timer active" systemctl is-active omageeko-bt-device-privacy.timer
 check "Bluetooth controller visible" bash -c 'bluetoothctl show | grep -q "Controller"'
 
 # Power profiles

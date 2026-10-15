@@ -44,6 +44,8 @@ sudo env OMARCHY_PATH=/usr/share/omarchy OMARCHY_INSTALL=/usr/share/omarchy/inst
   '
 
 sudo systemctl enable --now bluetooth.service power-profiles-daemon.service
+# Bonded BLE devices must be in Device Privacy Mode or they never reconnect (LL privacy)
+sudo systemctl enable --now omageeko-bt-device-privacy.service omageeko-bt-device-privacy.timer
 
 log "Configuring the lock screen PAM stack"
 omarchy-apply-lock

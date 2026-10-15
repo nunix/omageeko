@@ -82,13 +82,16 @@ Summary:        omageeko hardware integration for Tumbleweed laptops
 Requires:       wireplumber
 Requires:       socat
 Requires:       jq
+# btmgmt for the Bluetooth LE Device Privacy Mode helper
+Requires:       bluez
 
 %description    hardware
 Hardware defaults omageeko adds on top of Omarchy: readable names for laptop
 codec devices exposed through ALSA UCM (headphone jack, headset mic, speakers,
 internal microphone) so Omarchy's audio panel can tell them apart, and a watcher
 that re-wakes monitors listed in ~/.config/omageeko/monitor-wake-kick when they
-reconnect after deep standby but stay dark.
+reconnect after deep standby but stay dark, and a service that puts bonded
+Bluetooth LE devices into Device Privacy Mode so they can reconnect.
 
 %prep
 %setup -q -n omarchy-%{commit}
@@ -236,6 +239,9 @@ install -Dm644 %{_sourcedir}/overlay/share/wireplumber/60-omageeko-ucm-labels.co
   %{buildroot}%{_datadir}/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
 install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-monitor-wake-kick.service \
   %{buildroot}%{_userunitdir}/omageeko-monitor-wake-kick.service
+install -Dm755 %{_sourcedir}/overlay/share/libexec/bt-device-privacy %{buildroot}%{_libexecdir}/omageeko/bt-device-privacy
+install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-bt-device-privacy.service %{buildroot}%{_unitdir}/omageeko-bt-device-privacy.service
+install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-bt-device-privacy.timer %{buildroot}%{_unitdir}/omageeko-bt-device-privacy.timer
 
 %check
 # Every sudoers rule must parse
@@ -319,3 +325,7 @@ done
 %{_datadir}/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
 %{_bindir}/omageeko-monitor-wake-kick
 %{_userunitdir}/omageeko-monitor-wake-kick.service
+%dir %{_libexecdir}/omageeko
+%{_libexecdir}/omageeko/bt-device-privacy
+%{_unitdir}/omageeko-bt-device-privacy.service
+%{_unitdir}/omageeko-bt-device-privacy.timer

@@ -1,0 +1,12 @@
+[Unit]
+Description=omageeko: Device Privacy Mode for bonded Bluetooth LE devices
+After=bluetooth.service
+PartOf=bluetooth.service
+ConditionPathIsDirectory=/var/lib/bluetooth
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/omageeko/bt-device-privacy
+
+[Install]
+WantedBy=bluetooth.service

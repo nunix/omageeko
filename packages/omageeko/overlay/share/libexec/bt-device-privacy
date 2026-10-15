@@ -1,0 +1,39 @@
+#!/bin/bash
+# omageeko: put bonded Bluetooth LE devices into Device Privacy Mode.
+#
+# With LL privacy on (kernel default with capable controllers), a bonded LE peer
+# that shared its IRK goes into the controller's resolving list in Network
+# Privacy Mode: the controller then drops every advertisement carrying the
+# peer's identity address. Peers that reconnect from their identity address
+# (e.g. Logitech MX mice) are never heard again after their first disconnect.
+# Device Privacy Mode (device flag 0x02) accepts identity and private addresses.
+# BlueZ's main.conf "Privacy = device" would also enable *local* privacy, which
+# can break devices bonded without the local IRK, so only the peer flag is set.
+
+set -u
+shopt -s nullglob
+
+for info in /var/lib/bluetooth/*/*/info; do
+  dir=${info%/info}
+  addr=${dir##*/}
+  adapter=${dir%/*}; adapter=${adapter##*/}
+  grep -q '^SupportedTechnologies=.*LE' "$info" || continue
+  grep -q '^\[IdentityResolvingKey\]' "$info" || continue   # only peers in the resolving list
+  case "$(sed -n 's/^AddressType=//p' "$info")" in
+    public) type=1 ;;
+    *) type=2 ;;
+  esac
+  index=$(btmgmt info 2>/dev/null | awk -v a="$adapter" '/^hci[0-9]+:/ { idx = substr($1, 4, length($1) - 4) } $1 == "addr" && $2 == a { print idx; exit }')
+  [[ -n $index ]] || continue
+  out=$(timeout 5 btmgmt --index "$index" get-flags -t "$type" "$addr" 2>/dev/null)
+  supported=$(awk '/Supported Flags:/ { print $3 }' <<<"$out")
+  current=$(awk '/Current Flags:/ { print $3 }' <<<"$out")
+  [[ -n $supported && -n $current ]] || continue
+  (( supported & 0x02 )) || continue
+  (( current & 0x02 )) && continue
+  new=$(printf '0x%08x' $(( current | 0x02 )))
+  if timeout 5 btmgmt --index "$index" set-flags -t "$type" -f "$new" "$addr" >/dev/null 2>&1; then
+    echo "Device Privacy Mode on for $addr ($current -> $new)"
+  fi
+done
+exit 0

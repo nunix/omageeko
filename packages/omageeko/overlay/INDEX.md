@@ -58,6 +58,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | `/usr/share/omarchy/logo.txt` and skel `branding/screensaver.txt` | omageeko wordmark (Omarchy's block font; O/M/A glyphs reused) replaces the Omarchy logo; the original is kept at `/usr/share/omageeko/omarchy-logo.txt` |
 | `/usr/bin/omageeko-monitor-wake-kick` + user unit (omageeko-hardware) | re-wake monitors listed in `~/.config/omageeko/monitor-wake-kick` with a DPMS cycle when they reconnect after deep standby (Odyssey G9 quirk) |
 | `/usr/bin/omageeko-box` | apps from Omarchy's Arch repo in the `omageeko-arch` distrobox (`@box:` map targets) |
+| `/usr/libexec/omageeko/bt-device-privacy` + `omageeko-bt-device-privacy.{service,timer}` (omageeko-hardware) | Device Privacy Mode (flag 0x02) for bonded BLE devices, so peers advertising from their identity address (MX mice) can reconnect with ll-privacy on |
 | `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports |
 
 ## Menu edits (`menu-transform.py`, run in %prep; fails on upstream drift)
