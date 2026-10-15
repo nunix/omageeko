@@ -12,6 +12,8 @@ Ported from the `feature/workspace-carousel` and `personal/mx2` branches of nuni
 
 With windows on 1 and 3, `right` goes 1 → 3 → 4 → 1.
 
+When the screen has pinned workspaces (persistent rules, see `desk-workspaces.md`), it cycles exactly those (plus occupied 1-5 there) and adds no free slot.
+
 ## MX thumb wheel (`bindings.lua`)
 
 ```lua

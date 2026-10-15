@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# omarchy:summary=Swap the two columns of the active workspace in one go
+# omarchy:args=<left|right>
+# omarchy:hidden=true
+# omageeko: a split column on one side and a single window on the other trade
+# places with one key, instead of moving every window across with
+# Super + Shift + arrows. Dwindle: the window alone in its column is a child of
+# the root split, so swapping that split swaps the columns; when both columns
+# are split (2x2), each left window swaps with its right neighbour. Scrolling:
+# the focused column swaps with its neighbour in the given direction.
+
+case ${1:-} in
+left) direction=l ;;
+right) direction=r ;;
+*)
+  echo "Usage: omarchy-hyprland-window-swap-columns <left|right>" >&2
+  exit 1
+  ;;
+esac
+
+dispatch() {
+  hyprctl dispatch "$1" >/dev/null
+}
+
+workspace=$(hyprctl activeworkspace -j) || exit 1
+workspace_id=$(jq -r '.id' <<<"$workspace")
+
+if [[ $(jq -r '.tiledLayout' <<<"$workspace") == "scrolling" ]]; then
+  dispatch "hl.dsp.layout(\"swapcol $direction\")"
+  exit 0
+fi
+
+tiled=$(hyprctl clients -j | jq --argjson ws "$workspace_id" \
+  '[.[] | select(.workspace.id == $ws and .floating == false and .hidden == false)]')
+(($(jq 'length' <<<"$tiled") >= 2)) || exit 0
+
+focused=$(hyprctl activewindow -j | jq -r '.address // empty')
+
+# The tiled area, then a window spanning its full height (alone in its column)
+top=$(jq '[.[].at[1]] | min' <<<"$tiled")
+bottom=$(jq '[.[] | .at[1] + .size[1]] | max' <<<"$tiled")
+left_edge=$(jq '[.[].at[0]] | min' <<<"$tiled")
+lone=$(jq -r --argjson top "$top" --argjson bottom "$bottom" \
+  '[.[] | select(.at[1] == $top and .at[1] + .size[1] == $bottom)] | sort_by(.size[0] * .size[1]) | last | .address // empty' <<<"$tiled")
+
+if [[ -n $lone ]]; then
+  dispatch "hl.dsp.focus({ window = \"address:$lone\" })"
+  dispatch 'hl.dsp.layout("swapsplit")'
+else
+  # Both columns split: swap row by row, left column into the right one
+  for address in $(jq -r --argjson left "$left_edge" '.[] | select(.at[0] == $left) | .address' <<<"$tiled"); do
+    dispatch "hl.dsp.focus({ window = \"address:$address\" })"
+    dispatch 'hl.dsp.window.swap({ direction = "r" })'
+  done
+fi
+
+[[ -n $focused ]] && dispatch "hl.dsp.focus({ window = \"address:$focused\" })"
+exit 0

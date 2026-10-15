@@ -33,6 +33,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-pkg-opi-install (new, from omaweed) | opi search over OBS/Packman (Install › OPI) |
 | omarchy-agent-usage-agy / -hermes (new, from omaweed) | Antigravity/Vertex and Hermes usage collectors; no balance emitted when nothing was spent |
 | omarchy-hyprland-workspace-carousel (new, from omarchy-mac feature/workspace-carousel) | wrapping workspace cycle on the focused monitor; bound by host files (`docs/touchpad-and-mouse.md`) |
+| omarchy-hyprland-window-swap-columns (new) | swap a workspace's two columns in one step (dwindle swapsplit / row swaps, scrolling swapcol); bound by host files (`docs/desk-workspaces.md`) |
 | omarchy-snapshot | create: snapper (all configs). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
 
 ## Patches (`patches/`, applied with `--fuzz=0`)

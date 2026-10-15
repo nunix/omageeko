@@ -63,6 +63,7 @@ fi
 
 check "AMD Vulkan driver" rpm -q libvulkan_radeon
 check "workspace carousel command" command -v omarchy-hyprland-workspace-carousel
+check "column swap command" command -v omarchy-hyprland-window-swap-columns
 check "iPhone tethering: usbmuxd + imobiledevice-tools" rpm -q usbmuxd imobiledevice-tools
 check "iPhone tethering: ipheth driver available" bash -c 'find /lib/modules/$(uname -r) -name "ipheth.ko*" | grep -q .'
 

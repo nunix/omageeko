@@ -16,6 +16,16 @@ hl.monitor({ output = "DP-8", mode = "preferred", position = "auto-center-left",
 hl.monitor({ output = "HDMI-A-1", mode = "preferred", position = "auto-center-right", scale = omarchy_monitor_scale })
 hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto-center-down", scale = omarchy_monitor_scale })
 
+-- Workspaces pinned per screen, so a window sent to a workspace lands on a
+-- known screen: DP-8 = 1, 4 | DP-9 = 2, 5 | HDMI-A-1 = 3, 6. Persistent keeps
+-- all six in the bar even when empty; default picks what each screen opens on.
+-- Without a pinned screen (laptop only), Hyprland puts them on what's there.
+for screen, workspaces in pairs({ ["DP-8"] = { 1, 4 }, ["DP-9"] = { 2, 5 }, ["HDMI-A-1"] = { 3, 6 } }) do
+  for index, workspace in ipairs(workspaces) do
+    hl.workspace_rule({ workspace = tostring(workspace), monitor = screen, persistent = true, default = index == 1 })
+  end
+end
+
 -- Configure a specific monitor.
 -- hl.monitor({ output = "DP-2", mode = "2560x1440@144", position = "0x0", scale = 1 })
 

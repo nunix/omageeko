@@ -33,3 +33,9 @@
 -- "SUPER + mouse_right" instead to keep it in apps.
 o.bind("mouse_left", "Previous workspace (carousel)", "omarchy-hyprland-workspace-carousel left")
 o.bind("mouse_right", "Next workspace (carousel)", "omarchy-hyprland-workspace-carousel right")
+
+-- omageeko (21K6S0A00C): swap the workspace's two columns in one go (a split
+-- column and a single window trade sides). Replaces Omarchy's group focus on
+-- these keys; Super + Alt + Tab and Super + Alt + wheel still cycle a group.
+o.rebind("SUPER + CTRL + LEFT", "Swap columns", "omarchy-hyprland-window-swap-columns left")
+o.rebind("SUPER + CTRL + RIGHT", "Swap columns", "omarchy-hyprland-window-swap-columns right")
