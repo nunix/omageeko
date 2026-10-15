@@ -52,5 +52,23 @@ On-demand entries use the `-` layer, so `map_packages 06` installs nothing up fr
 
 **Verify:** natives published, distrobox/omageeko-box present, the box on Omarchy's repo, flatpak and Flathub, `repos.tsv`, the font RPMs published, the menu edits, update-time on chrony, and `pkgaudit.py` reporting `broken=0`.
 
+## 06b — Omarchy base applications (done)
+
+Menu audit first: `layers/06-shell/tools/menuaudit.py <sections>`. It follows each menu action two levels into `omarchy-*` and flags stubs, Arch references and absent programs. It's noisy (strings and functions); confirm each finding by hand. The real gaps were apps Omarchy installs as base: the Print key needs **omasnap**, Share needs the **localsend** CLI, plus the file manager (**nautilus**) and media (**mpv**, **imv**).
+
+Install set = every `packages.map` entry with layer `06`, passed to `omarchy-pkg-add` so it resolves like the menus do:
+- **Tumbleweed:** nautilus, sushi, python313-nautilus, mpv, mpv-mpris, imv, evince, gnome-disk-utility; extra `v4l-utils` (webcam overlay in screen recording).
+- **Native local RPMs** (user decision: mixed):
+  - `packages/omasnap` (cmake/Qt6 + layer-shell-qt6)
+  - `packages/herdr` (cargo + zig 0.16 tarball; TW has 0.15)
+  - `packages/disktree` (upstream binary; native so it sees the host's disks)
+  - `packages/tzupdate` (cargo; must run the host's timedatectl)
+  - `packages/aether` (upstream Go binary; a preinstall)
+  - `packages/omarchy-nvim` (LazyVim starter + Omarchy config, plugins synced headless in the builder and slimmed with Omarchy's verbatim functions, seeded to /etc/skel; arch-specific because plugins carry native libs; the dependency generator is excluded from those trees). Layer 06 then runs `omarchy-nvim-setup`.
+- **Box:** localsend (Omarchy's build gives the `localsend` CLI that Share needs; Flathub has none), gliff, tobi-try, plus the preinstalls omacalc, omacut, omawrite, signed, hype, monologue, cliamp.
+- **Preinstalls:** the list is parsed from upstream's `omarchy-remove-preinstalls` drop list. It's skipped while `~/.local/state/omarchy/preinstalls-removed` exists; `Install › Preinstalls` brings them back through the same mapping.
+
+Gotchas: `localsend --help` launches the GUI (don't use it as a smoke test). Never kill with `pgrep -f`/`pkill -f` patterns that also appear in your own command line.
+
 ## Next parts
-06b Setup, 06c Trigger, 06d Style, 06e System, 06f Learn, 06g bar/panels: reviewed with the user in the running session.
+06c Trigger details, 06d Setup details (language/locale-gen, DNS, direct boot, sudoless docker), 06e Learn, then bar/panels: reviewed with the user in the running session.

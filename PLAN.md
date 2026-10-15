@@ -98,8 +98,9 @@ The Omarchy menu (Super+Space) has 10 sections and 398 entries. Each part below 
 
 | Part | Menu area | Entries | Tumbleweed work |
 |---|---|---|---|
-| **06a** | Install / Remove / Update + package pickers | 93 + 69 + 28 | Resolve every package name (audit: 22 ok, 54 unresolved). Add vendor-repo and Flathub targets to the map. Relabel "AUR" as Flathub. Channel entries. Test `omarchy update` end to end. Firmware (fwupd), time/timezone. |
-| 06b | Setup | 76 | monitors, keybindings, input, language/locale, network, default apps, plugins, security (fido2, sshd → firewalld), config, direct-boot (limine → systemd-boot/sdbootutil), reset (factory reset → snapper) |
+| **06a ✅** | Install / Remove / Update + package pickers | 93 + 69 + 28 | Resolve every package name (audit: 22 ok, 54 unresolved). Add vendor-repo and Flathub targets to the map. Relabel "AUR" as Flathub. Channel entries. Test `omarchy update` end to end. Firmware (fwupd), time/timezone. |
+| **06b ✅** | Omarchy base apps | — | nautilus/mpv/imv/evince/disks, omasnap/herdr/disktree/tzupdate/aether/omarchy-nvim native, localsend/gliff/try + preinstalls in the box |
+| 06d | Setup | 76 | monitors, keybindings, input, language/locale, network, default apps, plugins, security (fido2, sshd → firewalld), config, direct-boot (limine → systemd-boot/sdbootutil), reset (factory reset → snapper) |
 | 06c | Trigger | 97 | appearance toggles, emoji, clipboard history, reminders, capture (screenshot/record/OCR), transcode, share (LocalSend), hardware toggles, tests |
 | 06d | Style | 14 | themes, backgrounds, unlock screen, fonts, hyprland look, screensaver, about |
 | 06e | System | 9 | lock, suspend, hibernate (port), logout, reboot, reboot to boot menu (systemd-boot), shutdown |

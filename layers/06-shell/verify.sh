@@ -28,4 +28,15 @@ audit=$(python3 -I "$OMAGEEKO_ROOT/layers/06-shell/tools/pkgaudit.py" 2>&1); sta
 summary=$(head -1 <<<"$audit")
 if (( status == 0 )); then ok "menu package names: $summary"; else bad "menu package names: $summary"; sed -n '2,$p' <<<"$audit" | grep BROKEN; fi
 
+echo "06b: Omarchy base applications"
+for c in nautilus mpv imv evince gnome-disks omasnap herdr disktree tzupdate localsend v4l2-ctl omarchy-nvim-setup; do
+  check "command: $c" command -v "$c"
+done
+check "Neovim config seeded (LazyVim)" test -f ~/.config/nvim/lazyvim.json
+check "LazyVim plugins cached" test -d ~/.local/share/nvim/lazy/LazyVim
+check "screenshot command resolves (omasnap)" bash -c 'grep -q "exec omasnap" /usr/bin/omarchy-capture-screenshot && command -v omasnap'
+if [[ -f ~/.local/state/omarchy/preinstalls-removed ]]; then
+  check "preinstalls stay removed (no LibreOffice/Pinta)" bash -c '! rpm -q libreoffice pinta >/dev/null 2>&1'
+fi
+
 exit $fail

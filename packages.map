@@ -1,6 +1,6 @@
 # omageeko package map: upstream install/omarchy-base.packages -> Tumbleweed
 # Format: <arch-name> <layer> <tw-packages,comma,separated | @build | @flatpak:<id> | @repo:<alias> | -> [# note]
-#   layer  = omageeko layer that installs it (01 base, 02 build, 04 session, 05 hardware, 06 shell, 07 login-boot, 08 system, 09 apps)
+#   layer  = omageeko layer that installs it (01 base, 02 build, 04 session, 05 hardware, 06 shell, 07 login-boot, 08 system, 09 unused)
 #   @repo:<alias>:<rpm> = vendor RPM repo from packages/omageeko/overlay/share/repos.tsv (enabled on first use)
 #   @none  = nothing to install on Tumbleweed (treated as present)
 #   @box:<pkg> = Omarchy's Arch package in the omageeko-arch distrobox (omageeko-box)
@@ -98,6 +98,7 @@ woff2-font-awesome     01 fontawesome-fonts
 yaru-icon-theme        01 yaru-icon-theme
 gnome-themes-extra     01 gnome-themes-extras
 +symbols-nerd-font     01 nerdfonts-symbolsonly-fonts      # extra: Nerd glyph fallback for any font
++v4l-utils             06 v4l-utils                        # extra: v4l2-ctl for the screen recorder's webcam overlay
 ttf-jetbrains-mono-nerd-basic 02 @build:jetbrains-mono-nerd-fonts                    # configs use family "JetBrainsMono Nerd Font"; TW only ships plain JetBrains Mono
 ttf-ia-writer          02 @build:ia-writer-fonts
 
@@ -107,21 +108,21 @@ owe                    02 @build                           # video wallpaper eng
 owe-lockfeed           02 @build
 omarchy-hyprland-titlebars 02 @build                       # Hyprland plugin, needs hyprland-devel == 0.56.2
 hyprland-preview-share-picker 02 @build
-omasnap                09 @build                           # screenshot editor
-aether                 09 @build                           # theming tool (Go)
-gliff                  09 @build                           # Rust
-herdr                  09 @build                           # Rust
+omasnap                06 @build                          # screenshots (Print key): native for instant response
+aether                 06 @build                          # native (user decision); preinstall
+gliff                  06 @box:gliff
+herdr                  06 @build                          # native: Omarchy launch/refresh/restart commands use it
 ttfx                   02 @build                           # Rust
-omacalc                09 @build
-omacut                 09 @build
-omawrite               09 @build
-signed                 09 @build
-hype                   09 @build
-monologue              09 @build
-cliamp                 09 @build
-disktree-bin           09 @build
-tobi-try               09 @build
-tzupdate               09 @build
+omacalc                06 @box:omacalc                    # preinstall
+omacut                 06 @box:omacut                     # preinstall
+omawrite               06 @box:omawrite                   # preinstall
+signed                 06 @box:signed                     # preinstall
+hype                   06 @box:hype                       # preinstall
+monologue              06 @box:monologue                  # preinstall
+cliamp                 06 @box:cliamp                     # preinstall
+disktree-bin           06 @build:disktree                 # native: must see the host's disks
+tobi-try               06 @box:tobi-try
+tzupdate               06 @build                          # native: sets the host timezone
 
 # --- 04: session
 uwsm                   04 uwsm
@@ -176,22 +177,22 @@ vulkan-radeon          05 libvulkan_radeon
 vulkan-intel           -  libvulkan_intel                  # not this hardware; mapped for completeness
 lsp-plugins-lv2        -  lsp-plugins                      # speaker tunings (no tuning for this laptop)
 
-# --- 09: applications
+# --- 06b: Omarchy base applications (installed by layer 06; preinstalls skipped when removed)
 chromium               04 chromium                         # default browser + web apps; omarchy-provision-user sets it
-nautilus               09 nautilus
-nautilus-python        09 python313-nautilus
-sushi                  09 sushi
-gnome-disk-utility     09 gnome-disk-utility
-evince                 09 evince
-mpv                    09 mpv
-mpv-mpris              09 mpv-mpris
-imv                    09 imv
-pinta                  09 pinta
-libreoffice-fresh      09 libreoffice
-moonlight-qt           09 moonlight
-localsend              09 @flatpak:org.localsend.localsend_app
-obsidian               09 @flatpak:md.obsidian.Obsidian
-omarchy-nvim           09 @build                           # LazyVim preset; may become a user-config step
+nautilus               06 nautilus
+nautilus-python        06 python313-nautilus
+sushi                  06 sushi
+gnome-disk-utility     06 gnome-disk-utility
+evince                 06 evince
+mpv                    06 mpv
+mpv-mpris              06 mpv-mpris
+imv                    06 imv
+pinta                  06 pinta
+libreoffice-fresh      06 libreoffice
+moonlight-qt           06 moonlight
+localsend              06 @box:localsend                  # Omarchy's build: Share needs the `localsend` CLI
+obsidian               06 @flatpak:md.obsidian.Obsidian
+omarchy-nvim           06 @build                          # LazyVim with cached plugins, seeded via /etc/skel
 
 # --- skipped: Arch-only or replaced
 base-devel             -  -                                # toolchains live in the builder container

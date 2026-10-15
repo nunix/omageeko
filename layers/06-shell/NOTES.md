@@ -17,3 +17,9 @@
 - omazed (box) generates `~/.config/zed/themes/omazed.json` from the current Omarchy theme (`~/.local/state/omarchy/current/theme/colors.toml`). `theme-set.d/omazed` runs `omazed set` on every theme switch; Zed reloads theme files live.
 - Bug found (upstream too): omazed points Zed at "Omazed" once, then writes a marker (`~/.local/share/omazed/initialized`). That happened before Zed's first launch, and Zed's onboarding rewrote settings to "One Dark", so the Omarchy theme was never active. Fixed for the user (marker cleared plus `omazed sync`). The installer patch re-selects Omazed if onboarding overwrites it within 2 minutes.
 - Manual recovery: `rm ~/.local/share/omazed/initialized && omazed sync`.
+
+## 06b (2026-10-15) — done, verified
+- Top-down menu review. Already working: Apps; Style (themes, backgrounds, fonts, look, screensaver, About); Trigger toggles, emoji, clipboard, reminders, OCR, colour picker, transcode; Setup monitors/keybindings/input/defaults/plugins/config/fingerprint; System lock/suspend/logout/reboot/**reboot-to-boot-menu** (systemd-boot)/shutdown.
+- Fixed by 06b: screenshots (omasnap), file manager (nautilus, + sushi previews, python extensions), Share (localsend CLI), screen recording webcam overlay (v4l2-ctl), media (mpv, imv), PDF (evince), disks, herdr launcher/keybindings, Neovim (LazyVim, 52 plugins, Omarchy theme link).
+- Still open: 06c Trigger details (speed tests, hardware toggles); 06d Setup: `omarchy-locale-generate` (locale-gen, Arch), `omarchy-setup-direct-boot` (limine/UKI EFI entry; meaningless on systemd-boot), sudoless docker → podman, DNS live test; 06e Learn (Arch wiki → openSUSE). Later layers: plymouth (Style › Unlock), factory reset, sshd/firewalld, hibernation.
+- Share limitation: files must be under $HOME or /tmp (box mounts).
