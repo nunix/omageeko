@@ -50,6 +50,19 @@ omarchy-apply-lock
 
 snap_end
 
+# Machine-specific user files (hosts/<DMI product_name>/home), e.g. the monitor layout
+host_dir="$OMAGEEKO_ROOT/hosts/$(cat /sys/class/dmi/id/product_name 2>/dev/null)/home"
+if [[ -d $host_dir ]]; then
+  while IFS= read -r -d '' file; do
+    rel=${file#"$host_dir"/}
+    if ! cmp -s "$file" "$HOME/$rel"; then
+      [[ -e $HOME/$rel ]] && cp -a "$HOME/$rel" "$HOME/$rel.bak.$(date +%s)"
+      install -Dm644 "$file" "$HOME/$rel"
+      log "Host file: ~/$rel"
+    fi
+  done < <(find "$host_dir" -type f -print0)
+fi
+
 # The audio labels now ship system-wide in omageeko-hardware
 rm -f ~/.config/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
 systemctl --user restart wireplumber

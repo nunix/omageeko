@@ -11,7 +11,8 @@ Make the laptop hardware work the Omarchy way:
 3. Run **Omarchy's own** `install/hardware/all.sh` as root. Each script gates itself on a hardware match. Provide `run_logged` and skip the Arch-only `pacman.sh`. Env: `OMARCHY_PATH`, `OMARCHY_INSTALL`, PATH with `/usr/share/omarchy/bin`. Leaf scripts use `omarchy-pkg-add`, so Arch names they pass need `packages.map` entries (`vulkan-radeon`, `libfprint-git`, …).
 4. Enable and start `bluetooth.service` and `power-profiles-daemon.service`.
 5. Run `omarchy-apply-lock`. The Quickshell lock screen **refuses to lock** while `/etc/pam.d/omarchy-lock-password` is missing.
-6. Remove any user-level copy of the audio label rule and restart wireplumber.
+6. Copy machine-specific user files from `hosts/<DMI product_name>/home/` into `$HOME` (backing up files that differ). For example, `hosts/21K6S0A00C/home/.config/hypr/monitors.lua` is the desk layout.
+7. Remove any user-level copy of the audio label rule and restart wireplumber.
 
 ## Tumbleweed deltas (in packages/omageeko)
 

@@ -11,6 +11,7 @@ packages.map           every upstream package -> TW package / @build / @flatpak 
 packages/<name>/       RPM spec (+ patches, rebuild-on) for software missing on Tumbleweed
 packages/omageeko/     the Omarchy port itself: omageeko.spec, patches/, overlay/ (bin replacements,
                        stubs.tsv, INDEX.md = everything omageeko changes upstream)
+hosts/<dmi-product>/   machine-specific files (home/ is copied into $HOME by layer 05)
 lib/common.sh          shared helpers for layer scripts
 lib/build-rpm.sh       builds one spec inside the builder container
 layers/NN-name/

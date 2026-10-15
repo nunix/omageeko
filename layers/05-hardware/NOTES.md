@@ -22,3 +22,7 @@ All ran; only bluetooth.sh, vulkan.sh (already satisfied), network.sh (masks sys
 - DMIC DC offset: cosmetic for voice apps (they high-pass). A PipeWire filter-chain DC blocker could clean it if it causes pops.
 - Battery charge thresholds (thinkpad_acpi supports start/end): Omarchy has no setting for it. Candidate omageeko addition.
 - Bluetooth agent (`bt-agent.service`) only runs in the uwsm session (graphical-session.target).
+
+## Displays (2026-10-15)
+- Desk: DP-8 (Samsung C27G7, 2560x1440@240) | DP-9 + HDMI-A-1 (Odyssey G9 LS49AG95 in picture-by-picture: two 2560x1440@60 halves with the same serial). DP-9 sits at 0x0, DP-8 at `auto-center-left`, HDMI-A-1 at `auto-center-right`, and eDP-1 at `auto-center-down`, kept off by Omarchy's `internal-monitor-disable` toggle (toggles load after monitors.lua).
+- Saved as a host file: `hosts/21K6S0A00C/home/.config/hypr/monitors.lua`.

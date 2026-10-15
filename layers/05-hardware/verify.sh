@@ -47,6 +47,12 @@ if [[ -f /etc/pam.d/omarchy-lock-fingerprint ]]; then ok "fingerprint enrolled a
 fp_in_auth=$(grep -ls pam_fprintd /etc/pam.d/sudo /etc/pam.d/polkit-1 /etc/pam.d/common-auth 2>/dev/null)
 if [[ -z $fp_in_auth ]]; then ok "fingerprint not used by sudo/polkit/common-auth (lock screen only)"; else bad "pam_fprintd found in: $fp_in_auth (omageeko keeps sudo/polkit password-only)"; fi
 
+host_dir="$OMAGEEKO_ROOT/hosts/$(cat /sys/class/dmi/id/product_name 2>/dev/null)/home"
+if [[ -d $host_dir ]]; then
+  drift=$(cd "$host_dir" && find . -type f | while read -r f; do cmp -s "$f" "$HOME/${f#./}" || echo "${f#./}"; done)
+  if [[ -z $drift ]]; then ok "host files applied ($(basename "$(dirname "$host_dir")"))"; else info "host files differ from \$HOME (local edits?): $drift"; fi
+fi
+
 check "AMD Vulkan driver" rpm -q libvulkan_radeon
 
 exit $fail
