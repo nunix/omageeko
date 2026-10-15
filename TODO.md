@@ -39,5 +39,4 @@ Parked on 2026-10-15 after layer 06b. Ordered as the Omarchy menu reads, top-dow
 - [ ] Battery charge thresholds (ThinkPad start/stop) — no Omarchy setting exists
 - [ ] Laptop mic DC offset filter (AMD ACP DMIC), only if it causes pops
 - [ ] Report upstream: TW `hyprland-devel` missing glslang-devel + lua55-devel requires; Hyprland `--verify-config` segfault on `hl.timer`; omazed one-time theme selection vs Zed onboarding
-- [ ] Rebuild omageeko after the next `zypper dup` (2026-10-15 default-browser + Flatpak env fixes, swap-columns + carousel were hot-applied to the installed files; the builder was a snapshot ahead)
 - [ ] 99 consolidate: single `omageeko-install`, signing the local repo, upstream bump procedure
