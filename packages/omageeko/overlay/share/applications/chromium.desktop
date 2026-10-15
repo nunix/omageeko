@@ -1,0 +1,14 @@
+[Desktop Entry]
+# omageeko: Omarchy refers to Chromium as chromium.desktop (default browser,
+# web apps, mimeapps.list); Tumbleweed ships chromium-browser.desktop. This
+# hidden alias gives Omarchy's desktop ID a target without a second launcher.
+Type=Application
+Name=Chromium
+GenericName=Web Browser
+Exec=chromium %U
+Icon=chromium-browser
+Terminal=false
+NoDisplay=true
+StartupWMClass=Chromium-browser
+Categories=Network;WebBrowser;
+MimeType=application/pdf;application/xhtml+xml;text/html;text/xml;image/webp;x-scheme-handler/http;x-scheme-handler/https;

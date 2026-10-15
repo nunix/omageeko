@@ -10,7 +10,7 @@
 
 Name:           omageeko
 Version:        %{upstream_release}+git%{commit_date}.%{shortcommit}
-Release:        1.omageeko
+Release:        1.omageeko%{?dist}
 Summary:        Omarchy desktop (quattro) on openSUSE Tumbleweed
 License:        MIT
 URL:            https://github.com/omacom/omarchy
@@ -34,6 +34,9 @@ Requires:       perl
 Requires:       fakeroot
 Requires:       snapper
 Requires:       jetbrains-mono-nerd-fonts
+# Implicit on Arch: omarchy-provision-user and notifications call these
+Requires:       xdg-user-dirs
+Requires:       libnotify-tools
 # Scripts are run by Omarchy's own launchers; don't derive interpreter/module deps
 %global __requires_exclude_from ^%{_datadir}/omarchy/.*$
 
@@ -56,6 +59,17 @@ state markers), the resync copy under /usr/share/omarchy, application defaults
 in /etc, sudoers rules for Omarchy helpers, fonts, icons and systemd user units.
 Tumbleweed-sensitive upstream files (os-release, nsswitch.conf, limine,
 mkinitcpio, sddm) are deliberately not shipped.
+
+%package        session
+Summary:        Omarchy Hyprland session managed by uwsm
+Requires:       %{name} = %{version}-%{release}
+Requires:       uwsm
+Requires:       hyprland
+
+%description    session
+The "Omarchy (Hyprland uwsm)" Wayland session for display managers, the uwsm
+environment file that sets OMARCHY_PATH/PATH/TERMINAL/EDITOR for the session,
+and the systemd drop-in that keeps the shell alive across compositor exits.
 
 %prep
 %setup -q -n omarchy-%{commit}
@@ -135,6 +149,8 @@ install -d %{buildroot}%{_sysconfdir}/fonts/conf.d
 ln -sfn %{_datadir}/fontconfig/conf.avail/50-omarchy.conf %{buildroot}%{_sysconfdir}/fonts/conf.d/50-omarchy.conf
 install -Dm644 default/xdg-terminal-exec/hyprland-xdg-terminals.list %{buildroot}%{_datadir}/xdg-terminal-exec/hyprland-xdg-terminals.list
 install -Dm644 default/applications/mimeapps.list %{buildroot}%{_datadir}/applications/mimeapps.list
+# Hidden chromium.desktop alias for TW's chromium-browser.desktop
+install -Dm644 %{_sourcedir}/overlay/share/applications/chromium.desktop %{buildroot}%{_datadir}/applications/chromium.desktop
 
 install -d %{buildroot}%{_userunitdir}
 for unit in default/systemd/user/*.service; do
@@ -183,6 +199,13 @@ install -Dm644 default/nautilus-python/extensions/transcode.py %{buildroot}%{_sy
 install -Dm644 default/tensaku/state.toml %{buildroot}%{_sysconfdir}/skel/.local/state/tensaku/state.toml
 
 install -m755 bin/omarchy-upload-log bin/omarchy-debug bin/omarchy-debug-idle %{buildroot}%{_bindir}/
+
+# ---- omageeko-session (layer 04)
+# Upstream installs the session to /usr/local/share for sddm; lightdm reads /usr/share
+install -Dm644 default/wayland-sessions/omarchy.desktop %{buildroot}%{_datadir}/wayland-sessions/omarchy.desktop
+install -Dm644 default/uwsm/env.d/10-omarchy %{buildroot}%{_datadir}/uwsm/env.d/10-omarchy
+install -Dm644 etc/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf \
+  %{buildroot}%{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
 
 %check
 # Every sudoers rule must parse
@@ -246,7 +269,15 @@ done
 %dir %{_datadir}/xdg-terminal-exec
 %{_datadir}/xdg-terminal-exec/hyprland-xdg-terminals.list
 %{_datadir}/applications/mimeapps.list
+%{_datadir}/applications/chromium.desktop
 %{_userunitdir}/*.service
 %{_datadir}/fonts/omarchy/
 %{_datadir}/pixmaps/omarchy.png
 %{_datadir}/icons/hicolor/*/apps/*
+
+%files session
+%{_datadir}/wayland-sessions/omarchy.desktop
+%dir %{_datadir}/uwsm/env.d
+%{_datadir}/uwsm/env.d/10-omarchy
+%dir %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d
+%config %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf

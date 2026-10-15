@@ -39,7 +39,8 @@ rpmspec -P "$spec" | sed -nE 's/^Source[0-9]*:[[:space:]]*((https?|ftp):\/\/.*)$
   done
 
 echo ">>> Building"
-rpmbuild --define "_topdir $topdir" -ba "$spec"
+# %{?dist} = build timestamp, so every rebuild is a newer release zypper will upgrade to
+rpmbuild --define "_topdir $topdir" --define "dist .b$(date -u +%Y%m%d%H%M%S)" -ba "$spec"
 
 echo ">>> Publishing to local repo"
 for rpm in "$topdir"/RPMS/*/*.rpm; do

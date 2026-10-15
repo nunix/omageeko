@@ -1,0 +1,3 @@
+# Lines of the existing ~/.bashrc matching these extended regexes are carried
+# into the Omarchy ~/.bashrc (inside an omageeko block). One regex per line.
+google-cloud-sdk

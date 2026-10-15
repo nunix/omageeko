@@ -6,7 +6,7 @@
 
 Name:           omarchy-hyprland-titlebars
 Version:        0.2.2
-Release:        1.omageeko.h%{hypr_ver}
+Release:        1.omageeko.h%{hypr_ver}%{?dist}
 Summary:        Titlebars for Omarchy's floating workspaces (Hyprland plugin)
 License:        BSD-3-Clause AND MIT
 URL:            https://github.com/omacom/omarchy-hyprland-titlebars

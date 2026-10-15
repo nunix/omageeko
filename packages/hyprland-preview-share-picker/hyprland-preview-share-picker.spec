@@ -4,7 +4,7 @@
 
 Name:           hyprland-preview-share-picker
 Version:        0.2.1
-Release:        3.omageeko
+Release:        3.omageeko%{?dist}
 Summary:        Alternative Hyprland screen share picker with window and monitor previews
 License:        MIT
 URL:            https://github.com/WhySoBad/hyprland-preview-share-picker

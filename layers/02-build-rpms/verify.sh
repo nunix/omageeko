@@ -19,7 +19,7 @@ if quickshell --private-check-compat &>/dev/null; then ok "quickshell Qt compat 
 # Titlebars plugin sits where upstream Lua loads it and matches the running Hyprland version
 plugin=/usr/lib/omarchy-hyprland-titlebars/titlebars.so
 if [[ -f $plugin ]]; then ok "titlebars plugin at $plugin"; else bad "titlebars plugin missing at $plugin"; fi
-built_for=$(rpm -q --qf '%{RELEASE}' omarchy-hyprland-titlebars | sed -n 's/.*\.h//p')
+built_for=$(rpm -q --qf '%{RELEASE}' omarchy-hyprland-titlebars | sed -nE 's/.*\.h([0-9.]*[0-9]).*/\1/p')
 hypr=$(rpm -q --qf '%{VERSION}' hyprland)
 if [[ $built_for == "$hypr" ]]; then ok "titlebars built for hyprland $hypr"; else bad "titlebars built for $built_for, hyprland is $hypr: rebuild"; fi
 

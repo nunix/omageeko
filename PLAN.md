@@ -82,8 +82,8 @@ Each layer is done only when its `verify.sh` passes and it has been checked in a
 | 00 ✅ | bootstrap | git, devel tools (rpm-build, cmake, ninja, meson, go, rust), `opi`; fetch pinned upstream into `~/omageeko/upstream`; optional Packman for full codecs | low |
 | 01 ✅ | base-cli | SUSE-name map of `omarchy-base.packages` (CLI, fonts, terminals, TUIs); mise | low |
 | 02 ✅ | build-deps | RPMs: **quickshell**, owe/owe-lockfeed, omarchy-hyprland-titlebars, hyprland-preview-share-picker, ia-writer font. Later: omasnap, gliff, herdr, ttfx, aether, omacalc/omacut/omawrite/signed/hype | medium |
-| 03 ✅ (session test in 04) | omarchy-core | install upstream tree to `/usr/share/omarchy`, `bin` → `/usr/bin`, `etc/` drop-ins vetted for TW, `/etc/skel` content; TW overlay for pkg/update/boot/firewall commands | medium |
-| 04 | session | uwsm + `omarchy.desktop` session, user provisioning (`omarchy-provision-user`), Hyprland Lua bootstrap; test from a TTY before touching the DM | medium |
+| 03 ✅ | omarchy-core | install upstream tree to `/usr/share/omarchy`, `bin` → `/usr/bin`, `etc/` drop-ins vetted for TW, `/etc/skel` content; TW overlay for pkg/update/boot/firewall commands | medium |
+| 04 ✅ (login test pending) | session | uwsm + `omarchy.desktop` session, user provisioning (`omarchy-provision-user`), Hyprland Lua bootstrap; test from a TTY before touching the DM | medium |
 | 05 | shell | omarchy-shell (quickshell) running: bar, notifications, OSD, launcher, polkit, **lock (PAM + SELinux)**, clipboard; theme switching | medium |
 | 06 | login-boot | lightdm defaults to the omarchy session (optional greeter theming), plymouth Omarchy theme via dracut, snapshot cmds via snapper/sdbootutil, faillock/sudoers tweaks | **high** (boot/login) |
 | 07 | system | power-profiles-daemon, firewalld, bluetooth, podman docker-compat, fcitx5/XCompose, wireplumber tuning, `omarchy-update` → `zypper dup` + snapper | medium |

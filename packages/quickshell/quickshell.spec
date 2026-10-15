@@ -4,7 +4,7 @@
 
 Name:           quickshell
 Version:        0.3.2
-Release:        4.omageeko
+Release:        4.omageeko%{?dist}
 Summary:        Flexible toolkit for making desktop shells with QtQuick
 License:        LGPL-3.0-only
 URL:            https://github.com/quickshell-mirror/quickshell

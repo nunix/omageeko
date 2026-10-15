@@ -7,7 +7,7 @@
 
 Name:           ia-writer-fonts
 Version:        20261002.r63
-Release:        3.omageeko
+Release:        3.omageeko%{?dist}
 Summary:        iA Writer Mono, Duo, Quattro and Duospace fonts
 License:        OFL-1.1
 URL:            https://github.com/iaolo/iA-Fonts

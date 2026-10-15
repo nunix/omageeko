@@ -3,7 +3,7 @@
 
 Name:           owe
 Version:        0.2.10
-Release:        4.omageeko
+Release:        4.omageeko%{?dist}
 Summary:        High-performance wallpaper engine for Omarchy (mp4, gif, stills)
 License:        MIT
 URL:            https://github.com/omacom/owe

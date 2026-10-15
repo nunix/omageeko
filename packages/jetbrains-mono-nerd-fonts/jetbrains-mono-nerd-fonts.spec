@@ -2,7 +2,7 @@
 # Omarchy configs use the family name "JetBrainsMono Nerd Font".
 Name:           jetbrains-mono-nerd-fonts
 Version:        3.5.1
-Release:        2.omageeko
+Release:        2.omageeko%{?dist}
 Summary:        JetBrains Mono Nerd Font (Regular, Bold, Italic, BoldItalic)
 License:        OFL-1.1
 URL:            https://github.com/ryanoasis/nerd-fonts

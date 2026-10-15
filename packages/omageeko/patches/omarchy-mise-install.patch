@@ -1,0 +1,18 @@
+--- a/bin/omarchy-mise-install	2026-10-15 07:38:33.977445113 +0200
++++ b/bin/omarchy-mise-install	2026-10-15 07:38:33.987964233 +0200
+@@ -48,6 +48,15 @@
+ # hold a new version back for days after it ships. Exported rather than set on
+ # the install line alone, so resolving the version to execute agrees with the
+ # one just installed.
++# omageeko: never replace a command the user installed some other way (e.g. a
++# native Claude Code install symlinked at ~/.local/bin/claude). Only files that
++# are missing or already one of these mise wrappers get (re)written.
++target="$HOME/.local/bin/$command"
++if [[ -L $target || ( -e $target && $(sed -n 3p "$target" 2>/dev/null) != "mise use -g --quiet "* ) ]]; then
++  echo "omarchy-mise-install: keeping existing $target (not an Omarchy mise wrapper)"
++  exit 0
++fi
++
+ rm -f "$HOME/.local/bin/$command"
+ cat >"$HOME/.local/bin/$command" <<EOF
+ #!/bin/bash

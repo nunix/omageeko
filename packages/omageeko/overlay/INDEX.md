@@ -40,6 +40,20 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-update-restart | kernel ownership via `rpm -qf` |
 | omarchy-debug | package info from rpm |
 | omarchy-upload-log | package list from rpm |
+| omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
+
+## Added files (`overlay/share/`)
+
+| File | Why |
+|---|---|
+| `/usr/share/applications/chromium.desktop` (hidden) | Omarchy uses the `chromium.desktop` ID (default browser, web apps, mimeapps.list); TW ships `chromium-browser.desktop` |
+| `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports |
+
+## Path changes
+
+| Upstream path | omageeko path | Why |
+|---|---|---|
+| `/usr/local/share/wayland-sessions/omarchy.desktop` | `/usr/share/wayland-sessions/omarchy.desktop` | lightdm reads /usr/share (upstream's location is for sddm) |
 
 ## Stubs (`stubs.tsv`, generated at build)
 
@@ -58,6 +72,5 @@ Ported in later layers: system-factory-reset (06), plymouth-set (06), hibernatio
 | `etc/sddm.conf.d/*`, `default/sddm/*` | decision: keep lightdm |
 | `default/snapper/root` template | TW's installer already configures snapper |
 | `etc/docker/*`, docker drop-ins, `resolved.conf.d/20-docker-dns.conf` | podman |
-| `default/wayland-sessions/omarchy.desktop`, `default/uwsm/env.d/*`, `wayland-wm@hyprland` drop-in | layer 04 (session) |
 | `default/plymouth/*`, `etc/plymouth/*`, `etc/security/faillock.conf` | layer 06 |
 | `etc/sysctl.d/*`, `etc/systemd/{system,user,oomd,logind,resolved}.conf.d/*`, zram/zswap, udev, modprobe, NetworkManager, cups, sysusers, binfmt drop-ins, `environment.d` fcitx, `system-sleep/*` | layer 07 (system), each reviewed for TW |

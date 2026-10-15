@@ -164,7 +164,7 @@ ufw-docker             -  -                                # firewalld + podman 
 qemu-user-static-binfmt 07 qemu-linux-user                 # cross-arch containers
 
 # --- 08: applications
-chromium               08 chromium
+chromium               04 chromium                         # default browser + web apps; omarchy-provision-user sets it
 nautilus               08 nautilus
 nautilus-python        08 python313-nautilus
 sushi                  08 sushi
