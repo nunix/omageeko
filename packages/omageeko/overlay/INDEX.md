@@ -32,6 +32,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-pkg-flatpak-remove (new, from omaweed) | fzf picker removing system/user Flatpak apps (Remove › Flatpak) |
 | omarchy-pkg-opi-install (new, from omaweed) | opi search over OBS/Packman (Install › OPI) |
 | omarchy-agent-usage-agy / -hermes (new, from omaweed) | Antigravity/Vertex and Hermes usage collectors; no balance emitted when nothing was spent |
+| omarchy-hyprland-workspace-carousel (new, from omarchy-mac feature/workspace-carousel) | wrapping workspace cycle on the focused monitor; bound by host files (`docs/touchpad-and-mouse.md`) |
 | omarchy-snapshot | create: snapper (all configs). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
 
 ## Patches (`patches/`, applied with `--fuzz=0`)

@@ -11,7 +11,7 @@ Make the laptop hardware work the Omarchy way:
 3. Run **Omarchy's own** `install/hardware/all.sh` as root. Each script gates itself on a hardware match. Provide `run_logged` and skip the Arch-only `pacman.sh`. Env: `OMARCHY_PATH`, `OMARCHY_INSTALL`, PATH with `/usr/share/omarchy/bin`. Leaf scripts use `omarchy-pkg-add`, so Arch names they pass need `packages.map` entries (`vulkan-radeon`, `libfprint-git`, …).
 4. Enable and start `bluetooth.service` and `power-profiles-daemon.service`.
 5. Run `omarchy-apply-lock`. The Quickshell lock screen **refuses to lock** while `/etc/pam.d/omarchy-lock-password` is missing.
-6. Copy machine-specific user files from `hosts/<DMI product_name>/home/` into `$HOME` (backing up files that differ). For example, `hosts/21K6S0A00C/home/.config/hypr/monitors.lua` is the desk layout.
+6. Copy machine-specific user files from `hosts/<DMI product_name>/home/` into `$HOME` (backing up files that differ). For example, `hosts/21K6S0A00C/home/.config/hypr/monitors.lua` is the desk layout, and `bindings.lua` / `input.lua` there add the MX thumb-wheel workspace carousel and Mac-like touchpad (`docs/touchpad-and-mouse.md`).
 7. Remove any user-level copy of the audio label rule and restart wireplumber.
 
 ## Tumbleweed deltas (in packages/omageeko)
@@ -50,3 +50,4 @@ Extra lock-stack check without a real password: `/tmp/omageeko-tools/pamcheck.py
 **Manual:** `omarchy-setup-security-fingerprint` (interactive enrollment), the lock screen (Super+Ctrl+L), Bluetooth pairing in the panel, and switching to the headset in the audio panel.
 
 A device stuck from pairing attempts without an agent stays half-connected: `bluetoothctl remove <mac>`, then pair again (panel, or `bluetoothctl pair <mac>` + `trust`).
+- **iPhone USB tethering**: the `+usbmuxd` and `+imobiledevice-tools` extras in `packages.map` (layer 05). `ipheth` is in-kernel. See `docs/iphone-tethering.md`.

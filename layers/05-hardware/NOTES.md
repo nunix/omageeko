@@ -36,3 +36,8 @@ All ran; only bluetooth.sh, vulkan.sh (already satisfied), network.sh (masks sys
 - Not used: BlueZ `Privacy = device` in main.conf also turns on local privacy. Devices bonded without the local IRK (this capture showed a zero local IRK) could then fail to reconnect.
 - Dead ends, for the record: a "missing LongTermKey" (normal for LE Secure Connections: BlueZ stores the single key as PeripheralLongTermKey), and turning address resolution off for the device (a fresh pairing resets flags; the accept/resolve state wasn't consistent at the time).
 - Mistakes during debugging: a host-side `bluetoothctl disconnect` disables BlueZ auto-connect until the next Connect (invalid test), and `bluetoothctl --timeout 5 connect` cancels its own Connect call. Use `busctl --timeout=90 call org.bluez <dev> org.bluez.Device1 Connect`.
+
+## Ported from nunix/omarchy-mac branches (2026-10-15)
+- Workspace carousel (`feature/workspace-carousel`, `personal/mx2`): `omarchy-hyprland-workspace-carousel` in the overlay. Change from the branch: workspace ids are global in Hyprland, so the "next empty" slot skips ids that live on another monitor. Otherwise, with 2 on DP-8 and 3 on DP-9, scrolling on HDMI-A-1 jumped to another screen.
+- MX thumb wheel binds and the Mac-like touchpad (natural scroll, disable while typing, reversed 3-finger swipes) are host files: `hosts/21K6S0A00C/home/.config/hypr/{bindings,input}.lua`. Gesture actions use `hl.exec_cmd`.
+- iPhone tethering (`feature/iphone-tethering`): TW names are `usbmuxd` and `imobiledevice-tools` (there is no `libimobiledevice` package).

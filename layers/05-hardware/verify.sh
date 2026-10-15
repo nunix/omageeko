@@ -62,5 +62,8 @@ if [[ -f ~/.config/omageeko/monitor-wake-kick ]]; then
 fi
 
 check "AMD Vulkan driver" rpm -q libvulkan_radeon
+check "workspace carousel command" command -v omarchy-hyprland-workspace-carousel
+check "iPhone tethering: usbmuxd + imobiledevice-tools" rpm -q usbmuxd imobiledevice-tools
+check "iPhone tethering: ipheth driver available" bash -c 'find /lib/modules/$(uname -r) -name "ipheth.ko*" | grep -q .'
 
 exit $fail

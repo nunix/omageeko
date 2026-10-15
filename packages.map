@@ -174,6 +174,8 @@ fprintd                05 fprintd
 fprintd-pam            05 fprintd-pam                      # TW splits the PAM module out
 usbutils               05 usbutils
 vulkan-radeon          05 libvulkan_radeon
++usbmuxd               05 usbmuxd                          # extra: iPhone USB tethering (pairing daemon; the ipheth driver is in-kernel)
++imobiledevice-tools   05 imobiledevice-tools              # extra: idevicepair etc. to trust/pair an iPhone
 vulkan-intel           -  libvulkan_intel                  # not this hardware; mapped for completeness
 lsp-plugins-lv2        -  lsp-plugins                      # speaker tunings (no tuning for this laptop)
 

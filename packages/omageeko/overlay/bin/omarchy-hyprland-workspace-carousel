@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# omarchy:summary=Cycle through the focused monitor's occupied workspaces 1-5 plus the next free one
+# omarchy:args=<left|right>
+# omarchy:hidden=true
+# omageeko: ported from nunix/omarchy-mac feature/workspace-carousel. Bound to
+# the MX thumb wheel and 3-finger swipes in the host configs. Wraps around, so
+# the wheel never stalls on an edge or jumps to a far empty workspace.
+
+case ${1:-} in
+left) step=-1 ;;
+right) step=1 ;;
+*)
+  echo "Usage: omarchy-hyprland-workspace-carousel <left|right>" >&2
+  exit 1
+  ;;
+esac
+
+active_json=$(hyprctl activeworkspace -j) || exit 1
+active=$(jq -r '.id' <<<"$active_json")
+monitor=$(jq -r '.monitor' <<<"$active_json")
+
+workspaces=$(hyprctl workspaces -j)
+mapfile -t occupied < <(jq -r --arg monitor "$monitor" \
+  '[.[] | select(.monitor == $monitor and .id >= 1 and .id <= 5 and .windows > 0) | .id] | sort | .[]' <<<"$workspaces")
+# Ids living on other monitors: focusing them would jump to that screen
+mapfile -t elsewhere < <(jq -r --arg monitor "$monitor" '.[] | select(.monitor != $monitor) | .id' <<<"$workspaces")
+
+max=0
+for id in "${occupied[@]}"; do
+  ((id > max)) && max=$id
+done
+
+candidates=("${occupied[@]}")
+for ((id = max + 1; id <= 5; id++)); do
+  [[ " ${elsewhere[*]} " == *" $id "* ]] && continue
+  candidates+=("$id")
+  break
+done
+((active >= 1 && active <= 5)) && candidates+=("$active")
+((${#candidates[@]})) || candidates=(1)
+mapfile -t candidates < <(printf '%s\n' "${candidates[@]}" | sort -n -u)
+
+index=-1
+for i in "${!candidates[@]}"; do
+  [[ ${candidates[i]} == "$active" ]] && index=$i
+done
+
+count=${#candidates[@]}
+if ((index < 0)); then
+  # Active workspace outside 1-5 (special or high-numbered): enter at an edge
+  ((step > 0)) && next=${candidates[0]} || next=${candidates[count - 1]}
+else
+  next=${candidates[(index + step + count) % count]}
+fi
+
+[[ $next == "$active" ]] && exit 0
+hyprctl eval "hl.dispatch(hl.dsp.focus({ workspace = \"$next\" }))" >/dev/null
