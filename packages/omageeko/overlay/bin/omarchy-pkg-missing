@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# omarchy:summary=Returns true if any of the named packages are missing from the system (otherwise false).
+# omarchy:args=<packages...>
+# omageeko: Tumbleweed port (zypper/flatpak via /usr/share/omageeko/pkgmap.tsv)
+
+source /usr/share/omageeko/lib/pkg.sh
+
+for pkg in "$@"; do
+  if ! omageeko_pkg_installed "$pkg"; then
+    exit 0
+  fi
+done
+
+exit 1

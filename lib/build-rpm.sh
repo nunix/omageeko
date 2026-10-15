@@ -15,8 +15,9 @@ zypper --non-interactive --quiet dist-upgrade --no-recommends
 
 rm -rf "$topdir"
 mkdir -p "$topdir"/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
-# Patches and extra files ship next to the spec
-find "$pkgdir" -maxdepth 1 -type f ! -name '*.spec' -exec cp -t "$topdir/SOURCES" {} +
+# Patches and extra files (and subdirectories) ship next to the spec
+cp -a "$pkgdir"/. "$topdir/SOURCES/"
+rm -f "$topdir"/SOURCES/*.spec
 
 echo ">>> Installing BuildRequires"
 mapfile -t buildreqs < <(rpmspec -q --buildrequires "$spec" | sed -E 's/ +([<>=]+) +/\1/')

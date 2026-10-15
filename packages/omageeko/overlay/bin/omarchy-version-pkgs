@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# omarchy:summary=Print when system packages were last upgraded
+# omageeko: Tumbleweed port: newest package install time from the rpm database
+# (zypper's history log is root-only)
+
+last=$(rpm -qa --qf '%{INSTALLTIME}\n' | sort -n | tail -1)
+[[ -n $last ]] || exit 1
+date -d "@$last" "+%A, %B %d %Y at %H:%M"

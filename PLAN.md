@@ -65,9 +65,9 @@ Machine: Lenovo ThinkPad P14s Gen 4 (AMD Ryzen 7 PRO 7840U / Radeon 780M), 54 Gi
 
 ```
 upstream omarchy (pinned commit, untouched)
-        +  overlay/       TW replacements for Arch-coupled omarchy-* commands
-        +  patches/       minimal diffs where a whole-file overlay is overkill
-        +  packages/      RPM specs for software missing on TW (quickshell, owe, …)
+        +  packages/omageeko/overlay/   TW replacements + generated stubs for Arch-coupled commands
+        +  packages/omageeko/patches/   minimal diffs where a whole-file overlay is overkill
+        +  packages/<name>/             RPM specs for software missing on TW (quickshell, owe, …)
         =  /usr/share/omarchy  +  /usr/bin/omarchy-*  +  /etc drop-ins  +  /etc/skel
 ```
 
@@ -81,8 +81,8 @@ Each layer is done only when its `verify.sh` passes and it has been checked in a
 |---|---|---|---|
 | 00 ✅ | bootstrap | git, devel tools (rpm-build, cmake, ninja, meson, go, rust), `opi`; fetch pinned upstream into `~/omageeko/upstream`; optional Packman for full codecs | low |
 | 01 ✅ | base-cli | SUSE-name map of `omarchy-base.packages` (CLI, fonts, terminals, TUIs); mise | low |
-| 02 ✅ (manual test pending) | build-deps | RPMs: **quickshell**, owe/owe-lockfeed, omarchy-hyprland-titlebars, hyprland-preview-share-picker, ia-writer font. Later: omasnap, gliff, herdr, ttfx, aether, omacalc/omacut/omawrite/signed/hype | medium |
-| 03 | omarchy-core | install upstream tree to `/usr/share/omarchy`, `bin` → `/usr/bin`, `etc/` drop-ins vetted for TW, `/etc/skel` content; TW overlay for pkg/update/boot/firewall commands | medium |
+| 02 ✅ | build-deps | RPMs: **quickshell**, owe/owe-lockfeed, omarchy-hyprland-titlebars, hyprland-preview-share-picker, ia-writer font. Later: omasnap, gliff, herdr, ttfx, aether, omacalc/omacut/omawrite/signed/hype | medium |
+| 03 ✅ (session test in 04) | omarchy-core | install upstream tree to `/usr/share/omarchy`, `bin` → `/usr/bin`, `etc/` drop-ins vetted for TW, `/etc/skel` content; TW overlay for pkg/update/boot/firewall commands | medium |
 | 04 | session | uwsm + `omarchy.desktop` session, user provisioning (`omarchy-provision-user`), Hyprland Lua bootstrap; test from a TTY before touching the DM | medium |
 | 05 | shell | omarchy-shell (quickshell) running: bar, notifications, OSD, launcher, polkit, **lock (PAM + SELinux)**, clipboard; theme switching | medium |
 | 06 | login-boot | lightdm defaults to the omarchy session (optional greeter theming), plymouth Omarchy theme via dracut, snapshot cmds via snapper/sdbootutil, faillock/sudoers tweaks | **high** (boot/login) |
@@ -95,5 +95,5 @@ Each layer is done only when its `verify.sh` passes and it has been checked in a
 ## 6. Upstream tracking
 
 - `upstream.lock` holds the quattro commit. Bumping it means: fetch, diff `bin/` and `install/` against the overlay index, re-apply patches, run all `verify.sh`.
-- `overlay/INDEX.md` lists every upstream file we replace and why. That's the whole maintenance surface.
+- `packages/omageeko/overlay/INDEX.md` lists every upstream file we replace, patch, stub or skip, and why. That's the whole maintenance surface.
 - Arch-only features (limine UKI, mkinitcpio hooks, Apple/T2 hardware, pacman hooks) are explicitly listed as skipped, not silently dropped.

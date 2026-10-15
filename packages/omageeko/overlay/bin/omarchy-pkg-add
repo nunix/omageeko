@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# omarchy:summary=Install Arch packages if they are missing
+# omarchy:args=<packages...>
+# omarchy:examples=omarchy pkg add jq ripgrep
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port (zypper/flatpak via /usr/share/omageeko/pkgmap.tsv)
+
+source /usr/share/omageeko/lib/pkg.sh
+
+rpms=()
+flatpaks=()
+for pkg in "$@"; do
+  omageeko_pkg_installed "$pkg" && continue
+  while read -r target; do
+    case "$target" in
+      rpm:*) rpms+=("${target#rpm:}") ;;
+      flatpak:*) flatpaks+=("${target#flatpak:}") ;;
+      skip:*)
+        echo -e "\033[31mError: Package '$pkg' is not available on omageeko (${target#skip:})\033[0m" >&2
+        exit 1
+        ;;
+    esac
+  done < <(omageeko_pkg_resolve "$pkg")
+done
+
+if (( ${#rpms[@]} )); then
+  omageeko_sudo zypper --non-interactive install --no-recommends "${rpms[@]}" || exit 1
+fi
+
+if (( ${#flatpaks[@]} )); then
+  omageeko_sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || exit 1
+  omageeko_sudo flatpak install --system --noninteractive flathub "${flatpaks[@]}" || exit 1
+fi
+
+for pkg in "$@"; do
+  # Secondary check in case the package manager didn't register an error
+  if ! omageeko_pkg_installed "$pkg"; then
+    echo -e "\033[31mError: Package '$pkg' did not install\033[0m" >&2
+    exit 1
+  fi
+done
+
+exit 0

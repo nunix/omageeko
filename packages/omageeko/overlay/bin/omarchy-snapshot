@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# omarchy:summary=Create or restore system snapshots with snapper
+# omarchy:args=<create|restore>
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port: restore uses systemd-boot snapshot entries (sdbootutil) and snapper rollback
+
+set -e
+
+COMMAND="$1"
+
+if [[ -z $COMMAND ]]; then
+  echo "Usage: omarchy-snapshot <create|restore>" >&2
+  exit 1
+fi
+
+if omarchy-cmd-missing snapper; then
+  exit 127 # omarchy-update can use this to just ignore if snapper is not available
+fi
+
+case "$COMMAND" in
+create)
+  # The description is just a label, so never let it abort the snapshot.
+  DESC="$(omarchy-version 2>/dev/null || echo unknown)"
+
+  mapfile -t CONFIGS < <(sudo snapper --csvout list-configs | awk -F, 'NR>1 {print $1}')
+
+  if (( ${#CONFIGS[@]} == 0 )); then
+    echo -e "\e[33mNo Snapper configs found, so no snapshot was created.\e[0m" >&2
+    exit 1
+  fi
+
+  echo -e "\e[32mCreate system snapshot\e[0m"
+
+  for config in "${CONFIGS[@]}"; do
+    sudo snapper -c "$config" create -c number -d "omarchy: $DESC"
+    sudo snapper -c "$config" cleanup number
+  done
+
+  echo "Snapshots can be selected during boot."
+  ;;
+restore)
+  # Booted into a read-only snapshot from the boot menu: make it the default
+  if [[ $(findmnt -no OPTIONS /) == *ro,* || $(findmnt -no OPTIONS /) == ro ]]; then
+    echo "Running from a read-only snapshot. Rolling back to it makes it the default system."
+    if gum confirm --default=false "Roll back to the running snapshot and reboot?"; then
+      sudo snapper rollback
+      omarchy-system reboot
+    fi
+  else
+    cat <<'MSG'
+To restore a snapshot on Tumbleweed:
+  1. Reboot and pick the snapshot in the systemd-boot menu (sdbootutil adds them).
+  2. Check the system works, then run: omarchy-snapshot restore
+     (this runs snapper rollback and makes that snapshot the default).
+MSG
+  fi
+  ;;
+esac

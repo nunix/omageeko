@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# omarchy:summary=Run a pacman transaction for the Omarchy update flow, shielded from desktop session teardown.
+# omarchy:args=<pacman-args>
+# omarchy:hidden=true
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port: runs zypper (arguments are zypper arguments)
+
+# A transaction inside the user session scope can be killed when systemd
+# reexecs the user managers mid-upgrade. A PID 1 scope keeps it out of them.
+scope=()
+if [[ -d /run/systemd/system && ! -L /run/systemd/system ]]; then
+  scope=(systemd-run --scope --quiet --collect)
+fi
+
+env_args=(OMARCHY_UPDATE_PACMAN=1)
+if [[ -n ${LC_ALL:-} ]]; then
+  env_args+=(LC_ALL="$LC_ALL")
+fi
+
+exec sudo env "${env_args[@]}" "${scope[@]}" zypper "$@"

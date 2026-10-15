@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# omarchy:summary=Print the active Omarchy mirror and package channel
+# omageeko: Tumbleweed port: packages come from Tumbleweed plus the omageeko local repo
+
+echo "tumbleweed / omageeko"

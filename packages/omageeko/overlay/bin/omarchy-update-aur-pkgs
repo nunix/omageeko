@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# omarchy:summary=Update AUR packages if any are installed
+# omageeko: Tumbleweed port: updates Flatpak apps (omageeko's AUR stand-in); local RPMs update with zypper dup
+
+if command -v flatpak &>/dev/null && [[ -n $(flatpak list --app --columns=application 2>/dev/null) ]]; then
+  echo -e "\e[32m\nUpdate Flatpak apps\e[0m"
+  sudo flatpak update --system --noninteractive || exit 1
+  flatpak update --user --noninteractive 2>/dev/null || true
+  echo
+fi

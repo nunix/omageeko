@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# omarchy:summary=Show a fuzzy-finder TUI for picking new AUR packages to install.
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port (zypper/flatpak): Tumbleweed has no AUR, so this picks Flathub applications instead
+
+fzf_args=(
+  --multi
+  --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select'
+  --preview-label-pos='bottom'
+  --preview-window 'down:65%:wrap'
+  --bind 'alt-p:toggle-preview'
+  --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+  --bind 'alt-k:preview-up,alt-j:preview-down'
+  --delimiter '\t'
+  --with-nth '1,2'
+  --preview 'flatpak remote-info --system flathub {1}'
+  --color 'pointer:green,marker:green'
+)
+
+sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || exit 1
+
+app_ids=$(flatpak remote-ls --system --app --columns=application,name flathub | sort -u |
+  fzf "${fzf_args[@]}" | cut -f1)
+
+if [[ -n $app_ids ]]; then
+  echo "$app_ids" | tr '\n' ' ' | xargs sudo flatpak install --system --noninteractive flathub
+  omarchy-show-done $?
+fi

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# omarchy:summary=Show a fuzzy-finder TUI for picking packages installed on the system to be removed.
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port (zypper/flatpak): lists explicitly installed packages (zypper user-installed set)
+
+fzf_args=(
+  --multi
+  --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select'
+  --preview-label-pos='bottom'
+  --preview-window 'down:65%:wrap'
+  --bind 'alt-p:toggle-preview'
+  --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+  --bind 'alt-k:preview-up,alt-j:preview-down'
+  --preview 'rpm -qi {1}'
+  --color 'pointer:red,marker:red'
+)
+
+# Like pacman -Qqe: packages installed on request, not pulled in as dependencies
+pkg_names=$(zypper --no-refresh -q packages --installed-only --userinstalled 2>/dev/null |
+  awk -F'|' 'NF >= 4 { n = $3; gsub(/ /, "", n); if (n != "" && n != "Name" && n !~ /^-+$/) print n }' | sort -u | fzf "${fzf_args[@]}")
+
+if [[ -n $pkg_names ]]; then
+  echo "$pkg_names" | tr '\n' ' ' | xargs sudo zypper --non-interactive remove --clean-deps
+  omarchy-show-done $?
+fi

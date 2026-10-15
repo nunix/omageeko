@@ -1,0 +1,32 @@
+--- a/bin/omarchy-migrate	2026-10-15 07:26:55.559001753 +0200
++++ b/bin/omarchy-migrate	2026-10-15 07:26:55.584201556 +0200
+@@ -65,18 +65,23 @@
+   fi
+ fi
+ 
+-wait_for_pacman_transaction() {
+-  local lock_file=/var/lib/pacman/db.lck
++# omageeko: zypper holds /run/zypp.pid (always present) with the PID of a running transaction
++zypper_transaction_running() {
++  local pid
++  pid=$(cat /run/zypp.pid 2>/dev/null) || return 1
++  [[ -n $pid ]] && kill -0 "$pid" 2>/dev/null
++}
+ 
+-  [[ -e $lock_file ]] || return 0
+-  echo "Waiting for pacman transaction to finish before running Omarchy migrations..."
++wait_for_pacman_transaction() {
++  zypper_transaction_running || return 0
++  echo "Waiting for zypper transaction to finish before running Omarchy migrations..."
+ 
+   for _ in {1..900}; do
+-    [[ -e $lock_file ]] || return 0
++    zypper_transaction_running || return 0
+     sleep 1
+   done
+ 
+-  echo "Pacman transaction is still running; Omarchy migrations will retry on next login."
++  echo "Zypper transaction is still running; Omarchy migrations will retry on next login."
+   exit 0
+ }
+ 

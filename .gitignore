@@ -1,3 +1,4 @@
 upstream/
 *.rpm
 /build/
+packages/omageeko/pkgmap.tsv

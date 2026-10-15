@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# omarchy:summary=Ensure the Omarchy and Arch keyring packages are installed and populated
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port: repository keys are managed by zypper; refreshing verifies them
+
+set -euo pipefail
+
+echo -e "\e[32m\nRefresh repositories and signing keys\e[0m"
+sudo zypper --non-interactive --quiet refresh
+echo "Keys are correct"

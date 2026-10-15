@@ -1,0 +1,14 @@
+--- a/bin/omarchy-upload-log	2026-10-15 07:26:55.574286905 +0200
++++ b/bin/omarchy-upload-log	2026-10-15 07:26:55.584376278 +0200
+@@ -127,9 +127,9 @@
+   {
+     echo ""
+     echo "========================================="
+-    echo "INSTALLED PACKAGES (pacman -Q)"
++    echo "INSTALLED PACKAGES (rpm -qa)"
+     echo "========================================="
+-    pacman -Q 2>/dev/null || echo "Failed to get package list"
++    rpm -qa --qf '%{NAME} %{VERSION}-%{RELEASE}\n' 2>/dev/null | sort || echo "Failed to get package list"
+   } >>"$TEMP_LOG"
+ 
+   if [[ ! -s $TEMP_LOG ]]; then

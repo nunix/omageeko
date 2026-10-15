@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# omarchy:summary=Update system packages with pacman
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port: Tumbleweed updates are a distribution upgrade (zypper dup)
+
+set -e
+
+echo -e "\e[32m\nUpdate system packages\e[0m"
+
+omarchy-update-pacman --non-interactive refresh
+
+# Unattended runs can't answer solver questions. Interactive runs retry with
+# zypper's prompts when the non-interactive pass hits a conflict.
+if omarchy-update-pacman --non-interactive dist-upgrade --auto-agree-with-licenses; then
+  exit 0
+fi
+
+if [[ ${OMARCHY_UPDATE_UNATTENDED:-0} == "1" || ! -t 0 ]]; then
+  echo -e "\e[31mzypper dup needs a decision. Re-run omarchy update in a terminal.\e[0m" >&2
+  exit 1
+fi
+
+echo -e "\e[33m\nzypper needs a decision to continue:\e[0m"
+exec omarchy-update-pacman dist-upgrade --auto-agree-with-licenses

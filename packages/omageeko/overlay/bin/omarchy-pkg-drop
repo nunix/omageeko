@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# omarchy:summary=Remove all the named packages from the system if they're installed (otherwise ignore).
+# omarchy:args=<packages...>
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port (zypper/flatpak via /usr/share/omageeko/pkgmap.tsv)
+
+source /usr/share/omageeko/lib/pkg.sh
+
+rpms=()
+flatpaks=()
+declare -A selected=()
+
+for pkg in "$@"; do
+  while read -r target; do
+    case "$target" in
+      rpm:*)
+        name=${target#rpm:}
+        if [[ -z ${selected[$name]} ]] && rpm -q -- "$name" &>/dev/null; then
+          rpms+=("$name")
+          selected[$name]=1
+        fi
+        ;;
+      flatpak:*)
+        name=${target#flatpak:}
+        if [[ -z ${selected[$name]} ]] && omageeko_flatpak_installed "$name"; then
+          flatpaks+=("$name")
+          selected[$name]=1
+        fi
+        ;;
+    esac
+  done < <(omageeko_pkg_resolve "$pkg")
+done
+
+if (( ${#rpms[@]} )); then
+  # --clean-deps matches pacman -Rns: also drop dependencies nothing else needs
+  omageeko_sudo zypper --non-interactive remove --clean-deps "${rpms[@]}" || exit 1
+fi
+
+if (( ${#flatpaks[@]} )); then
+  omageeko_sudo flatpak uninstall --system --noninteractive "${flatpaks[@]}" || exit 1
+fi
+
+exit 0

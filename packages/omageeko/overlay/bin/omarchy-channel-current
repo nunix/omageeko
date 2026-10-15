@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# omarchy:summary=Print the active Omarchy package channel
+# omageeko: Tumbleweed port: omageeko builds a pinned upstream commit, which it reports as "stable"
+
+set -euo pipefail
+
+if [[ $OMARCHY_PATH != "/usr/share/omarchy" ]]; then
+  echo dev
+elif rpm -q omageeko &>/dev/null; then
+  echo stable
+else
+  echo unknown
+fi

@@ -1,0 +1,63 @@
+# omageeko overlay index
+
+Every upstream file omageeko changes, replaces, stubs or deliberately leaves out. When bumping `upstream.lock`, diff these upstream files between the old and new commit. Anything that changed here needs a look.
+
+## Full replacements (`overlay/bin/`)
+
+| Command | Tumbleweed implementation |
+|---|---|
+| omarchy-pkg-present, omarchy-pkg-missing | `rpm -q --whatprovides` / `flatpak info` on names translated by `pkgmap.tsv` |
+| omarchy-pkg-add | translate, then `zypper install --no-recommends` and/or `flatpak install --system flathub`; skipped names error out |
+| omarchy-pkg-aur-add | same as pkg-add (no AUR: local repo, Flathub or TW repos) |
+| omarchy-pkg-drop | `zypper remove --clean-deps` (≈ `pacman -Rns`), `flatpak uninstall` |
+| omarchy-pkg-install | fzf over `zypper search --uninstalled-only` |
+| omarchy-pkg-remove | fzf over zypper's user-installed set (≈ `pacman -Qqe`) |
+| omarchy-pkg-aur-install | fzf over Flathub apps |
+| omarchy-update-pacman | `zypper` in a PID 1 scope (args are zypper args) |
+| omarchy-update-system-pkgs | `zypper refresh` + `zypper dup`; interactive retry on solver questions |
+| omarchy-update-system-pkgs-when-conflicted | re-runs update-system-pkgs |
+| omarchy-update-pkg-prune | `zypper clean` (packages only) |
+| omarchy-update-keyring | `zypper refresh` (repo keys are zypper's) |
+| omarchy-update-pacman-guard | no-op (no pacman hooks) |
+| omarchy-update-orphan-pkgs | zypper `--unneeded` set; reports only under `-y`, removal always asks (patterns can make packages look unneeded) |
+| omarchy-update-aur-pkgs | `flatpak update` |
+| omarchy-update-analyze-logs | warns on dracut/sdbootutil errors |
+| omarchy-update-available | newer TW snapshot (`media.1/products`) + newer omageeko-local RPMs; feeds the bar's update widget |
+| omarchy-version | omageeko RPM version-release |
+| omarchy-version-pkgs | newest rpm install time |
+| omarchy-version-channel | `tumbleweed / omageeko` |
+| omarchy-channel-current | `stable` (pinned upstream) or `dev` (linked checkout) |
+| omarchy-channel-set | explains omageeko follows `upstream.lock` |
+| omarchy-snapshot | create: snapper (all configs). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
+
+## Patches (`patches/`, applied with `--fuzz=0`)
+
+| Patch | Change |
+|---|---|
+| omarchy-migrate | wait on zypper (`/run/zypp.pid` holding a live PID) instead of the pacman db lock |
+| omarchy-remove-launcher-entry | owner via `rpm -qf`, removal via `zypper remove --clean-deps` |
+| omarchy-reinstall-configs | drop the `omarchy-refresh-limine` call |
+| omarchy-update-restart | kernel ownership via `rpm -qf` |
+| omarchy-debug | package info from rpm |
+| omarchy-upload-log | package list from rpm |
+
+## Stubs (`stubs.tsv`, generated at build)
+
+Not applicable: refresh-limine, refresh-pacman, upgrade-to-quattro, provision-owner, provision-hardware, dev-pkg-test, reinstall-pkgs.
+
+Ported in later layers: system-factory-reset (06), plymouth-set (06), hibernation-* (07), setup/remove-security-sshd (07), setup-security-fingerprint (09), install-gaming-steam/retroarch (08), install/remove-service-sunshine (08), install-openclaw-cli (08).
+
+## Upstream files not shipped
+
+| Upstream | Why |
+|---|---|
+| `etc-overrides/os-release` | would break zypper and TW tooling (ID=opensuse-tumbleweed) |
+| `etc/nsswitch.conf` | TW's `/usr/etc/nsswitch.conf` uses `usrfiles`; mDNS hosts line comes in layer 07 |
+| `etc/limine-entry-tool.d/*`, `default/limine/*`, `etc/mkinitcpio.conf.d/*` | systemd-boot + sdbootutil + dracut |
+| `default/libalpm/hooks/*` | no pacman |
+| `etc/sddm.conf.d/*`, `default/sddm/*` | decision: keep lightdm |
+| `default/snapper/root` template | TW's installer already configures snapper |
+| `etc/docker/*`, docker drop-ins, `resolved.conf.d/20-docker-dns.conf` | podman |
+| `default/wayland-sessions/omarchy.desktop`, `default/uwsm/env.d/*`, `wayland-wm@hyprland` drop-in | layer 04 (session) |
+| `default/plymouth/*`, `etc/plymouth/*`, `etc/security/faillock.conf` | layer 06 |
+| `etc/sysctl.d/*`, `etc/systemd/{system,user,oomd,logind,resolved}.conf.d/*`, zram/zswap, udev, modprobe, NetworkManager, cups, sysusers, binfmt drop-ins, `environment.d` fcitx, `system-sleep/*` | layer 07 (system), each reviewed for TW |

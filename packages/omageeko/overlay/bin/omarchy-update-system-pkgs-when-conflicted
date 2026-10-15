@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# omarchy:summary=Retry a system package update that hit a conflict
+# omarchy:hidden=true
+# omageeko: Tumbleweed port: zypper conflicts are handled interactively by omarchy-update-system-pkgs
+
+exec omarchy-update-system-pkgs

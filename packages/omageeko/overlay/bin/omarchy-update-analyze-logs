@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# omarchy:summary=Check the update log for known failure conditions
+# omageeko: Tumbleweed port: initramfs/boot entries are built by dracut and sdbootutil
+
+update_log="/tmp/omarchy-update.log"
+[[ -f $update_log ]] || exit 0
+
+if grep -qiE '(dracut|sdbootutil).*(error|fail)' "$update_log"; then
+  echo -e '\e[31mError: Initramfs or boot entry generation may have failed. Review logs before restart.\e[0m'
+  echo
+fi

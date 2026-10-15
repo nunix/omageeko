@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# omarchy:summary=Print the installed Omarchy version
+# omageeko: Tumbleweed port: version of the omageeko RPM (upstream version + omageeko release)
+
+omarchy_path=${OMARCHY_PATH:-/usr/share/omarchy}
+omarchy_path=${omarchy_path%/}
+
+if [[ $omarchy_path != "/usr/share/omarchy" ]]; then
+  hash=$(git -C "$omarchy_path" rev-parse --short HEAD 2>/dev/null || true)
+  if [[ -n $hash ]]; then
+    echo "dev ($hash)"
+  else
+    echo "dev"
+  fi
+  exit 0
+fi
+
+version=$(rpm -q --qf '%{VERSION}-%{RELEASE}' omageeko 2>/dev/null) || exit 1
+echo "$version"

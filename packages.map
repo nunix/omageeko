@@ -1,7 +1,7 @@
 # omageeko package map: upstream install/omarchy-base.packages -> Tumbleweed
 # Format: <arch-name> <layer> <tw-packages,comma,separated | @build | @flatpak:<id> | @repo:<alias> | -> [# note]
 #   layer  = omageeko layer that installs it (01 base, 02 build, 04 session, 05 shell, 06 login-boot, 07 system, 08 apps)
-#   @build = RPM built in layer 02 from packages/<name>
+#   @build = RPM built from packages/<name> (@build:<rpm> when the RPM name differs from the Arch name)
 #   -      = intentionally skipped (reason in note)
 # Lines whose name starts with '+' are omageeko extras (not in upstream's list).
 # Every package in upstream's list must appear here; layers/01-base-packages/verify.sh checks that.
@@ -94,8 +94,8 @@ woff2-font-awesome     01 fontawesome-fonts
 yaru-icon-theme        01 yaru-icon-theme
 gnome-themes-extra     01 gnome-themes-extras
 +symbols-nerd-font     01 nerdfonts-symbolsonly-fonts      # extra: Nerd glyph fallback for any font
-ttf-jetbrains-mono-nerd-basic 02 @build                    # configs use family "JetBrainsMono Nerd Font"; TW only ships plain JetBrains Mono
-ttf-ia-writer          02 @build
+ttf-jetbrains-mono-nerd-basic 02 @build:jetbrains-mono-nerd-fonts                    # configs use family "JetBrainsMono Nerd Font"; TW only ships plain JetBrains Mono
+ttf-ia-writer          02 @build:ia-writer-fonts
 
 # --- 02: built from source, desktop-critical (08 = Omarchy apps built with the same pipeline)
 quickshell             02 @build                           # 0.3.2 + Omarchy's load_qtquick_611.patch

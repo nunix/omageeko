@@ -1,0 +1,12 @@
+--- a/bin/omarchy-update-restart	2026-10-15 07:26:55.568738546 +0200
++++ b/bin/omarchy-update-restart	2026-10-15 07:26:55.584304181 +0200
+@@ -27,7 +27,8 @@
+ 
+   # Every kernel package owns modules.builtin; Arch Linux ARM's ships no vmlinuz here (#12440).
+   for kernel in "$kernel_modules_path"/*/modules.builtin; do
+-    if [[ -f $kernel ]] && pacman -Qo "$kernel" &>/dev/null; then
++    # omageeko: owned by an installed kernel RPM
++    if [[ -f $kernel ]] && rpm -qf "$kernel" &>/dev/null; then
+       installed_kernel=$(basename "$(dirname "$kernel")")
+ 
+       if [[ $installed_kernel == $running_kernel ]]; then

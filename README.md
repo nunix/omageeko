@@ -8,9 +8,9 @@ Omarchy (quattro) desktop on openSUSE Tumbleweed, built layer by layer. See `PLA
 upstream.lock          pinned omacom/omarchy (quattro) and omacom/omarchy-pkgs commits
 upstream/              fetched upstream tree (not edited, regenerated from the lock)
 packages.map           every upstream package -> TW package / @build / @flatpak / skip, with owning layer
-overlay/               TW replacements for Arch-coupled upstream files (+ INDEX.md)
-patches/               small diffs against upstream
 packages/<name>/       RPM spec (+ patches, rebuild-on) for software missing on Tumbleweed
+packages/omageeko/     the Omarchy port itself: omageeko.spec, patches/, overlay/ (bin replacements,
+                       stubs.tsv, INDEX.md = everything omageeko changes upstream)
 lib/common.sh          shared helpers for layer scripts
 lib/build-rpm.sh       builds one spec inside the builder container
 layers/NN-name/

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# omarchy:summary=Show a fuzzy-finder TUI for picking new Arch and OPR packages to install.
+# omarchy:requires-sudo=true
+# omageeko: Tumbleweed port (zypper/flatpak): lists packages from all enabled zypper repos (incl. omageeko-local)
+
+fzf_args=(
+  --multi
+  --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select'
+  --preview-label-pos='bottom'
+  --preview-window 'down:65%:wrap'
+  --bind 'alt-p:toggle-preview'
+  --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+  --bind 'alt-k:preview-up,alt-j:preview-down'
+  --preview 'zypper --no-refresh -q info {1}'
+  --color 'pointer:green,marker:green'
+)
+
+pkg_names=$(zypper --no-refresh -q search --uninstalled-only --type package |
+  awk -F'|' 'NF >= 3 { n = $2; gsub(/ /, "", n); if (n != "" && n != "Name" && n !~ /^-+$/) print n }' | sort -u | fzf "${fzf_args[@]}")
+
+if [[ -n $pkg_names ]]; then
+  source omarchy-sudo-keepalive
+  echo "$pkg_names" | tr '\n' ' ' | xargs sudo zypper --non-interactive install
+  omarchy-show-done $?
+fi

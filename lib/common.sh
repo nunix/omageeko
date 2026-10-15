@@ -94,3 +94,72 @@ map_special() {
   awk -v layer="$1" -v kind="@$2" '!/^#/ && $2 == layer && index($3, kind) == 1 { print $1, $3 }' \
     "$OMAGEEKO_ROOT/packages.map"
 }
+
+# ---- RPM builds (packages/<name>/<name>.spec) in the builder container
+# A package rebuilds only when its stamp changes: hash of packages/<name>/ plus
+# the repo versions of the packages in packages/<name>/rebuild-on.
+# Force with OMAGEEKO_REBUILD=all or OMAGEEKO_REBUILD="name1 name2".
+STAMP_DIR="$OMAGEEKO_REPO_DIR/.stamps"
+
+repo_version() {
+  zypper --no-refresh -q info "$1" 2>/dev/null | awk '/^Version/ { print $3; exit }'
+}
+
+package_stamp() {
+  local dir="$OMAGEEKO_ROOT/packages/$1"
+  {
+    (cd "$dir" && find . -type f -print0 | sort -z | xargs -0 sha256sum)
+    if [[ -f $dir/rebuild-on ]]; then
+      while read -r dep; do
+        [[ -n $dep ]] && echo "$dep $(repo_version "$dep")"
+      done < "$dir/rebuild-on"
+    fi
+  } | sha256sum | cut -d' ' -f1
+}
+
+needs_build() {
+  local name="$1" stamp="$2"
+  [[ ${OMAGEEKO_REBUILD:-} == "all" || " ${OMAGEEKO_REBUILD:-} " == *" $name "* ]] && return 0
+  [[ ! -f $STAMP_DIR/$name || $(cat "$STAMP_DIR/$name") != "$stamp" ]]
+}
+
+# The builder must not be on a newer Tumbleweed snapshot than the host
+check_builder_snapshot() {
+  podman image exists "$OMAGEEKO_BUILDER_IMAGE" || die "Builder image missing: run layer 00"
+  local host builder
+  host=$(. /etc/os-release && echo "$VERSION_ID")
+  builder=$(in_builder bash -c 'zypper -q ref >/dev/null; zypper -q -n dup --no-recommends >/dev/null; . /etc/os-release; echo $VERSION_ID' | tail -1)
+  if (( builder > host )); then
+    die "Host is on Tumbleweed $host, builder on $builder. Run 'sudo zypper dup' (and reboot if needed) first."
+  fi
+}
+
+# build_packages name... : build changed packages into the local repo
+build_packages() {
+  local name spec stamp log_file
+  mkdir -p "$STAMP_DIR" "$OMAGEEKO_REPO_DIR/.logs"
+  sudo zypper --non-interactive --quiet refresh >/dev/null
+  for name in "$@"; do
+    spec="packages/$name/$name.spec"
+    [[ -f $OMAGEEKO_ROOT/$spec ]] || die "Missing spec: $spec"
+    stamp=$(package_stamp "$name")
+    if needs_build "$name" "$stamp"; then
+      log "Building $name"
+      log_file="$OMAGEEKO_REPO_DIR/.logs/$name.log"
+      if in_builder lib/build-rpm.sh "$spec" >"$log_file" 2>&1; then
+        echo "$stamp" > "$STAMP_DIR/$name"
+      else
+        tail -30 "$log_file" >&2
+        die "Build failed for $name (full log: $log_file)"
+      fi
+    else
+      log "$name is up to date"
+    fi
+  done
+}
+
+# install_local_rpms rpm... : install or upgrade to the newest omageeko-local builds
+install_local_rpms() {
+  sudo zypper --non-interactive refresh "$OMAGEEKO_REPO_ALIAS" >/dev/null
+  sudo zypper --non-interactive install --no-recommends --from "$OMAGEEKO_REPO_ALIAS" "$@"
+}

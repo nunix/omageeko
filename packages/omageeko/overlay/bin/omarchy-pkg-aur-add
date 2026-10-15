@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# omarchy:summary=Add the named packages to the system from the AUR if they're missing. Returns false if it couldn't be done.
+# omarchy:args=<packages...>
+# omageeko: Tumbleweed port (zypper/flatpak via /usr/share/omageeko/pkgmap.tsv)
+# Tumbleweed has no AUR: AUR names resolve like any other through the package
+# map, to the omageeko local repo (built RPMs), Flathub, or the TW repos.
+
+exec omarchy-pkg-add "$@"

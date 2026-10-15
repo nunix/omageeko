@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# omarchy:summary=Returns true if all of the named packages are installed on the system (otherwise false).
+# omarchy:args=<packages...>
+# omageeko: Tumbleweed port (zypper/flatpak via /usr/share/omageeko/pkgmap.tsv)
+
+source /usr/share/omageeko/lib/pkg.sh
+
+for pkg in "$@"; do
+  omageeko_pkg_installed "$pkg" || exit 1
+done
+
+exit 0

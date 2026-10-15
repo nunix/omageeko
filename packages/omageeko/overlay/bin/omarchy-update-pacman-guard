@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# omarchy:summary=Prevent direct pacman system upgrades from bypassing omarchy update.
+# omarchy:hidden=true
+# omageeko: Tumbleweed port: no pacman hooks on Tumbleweed; direct zypper dup is allowed
+
+exit 0
