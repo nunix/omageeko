@@ -26,6 +26,8 @@ Wrap the run in a snapper pre/post pair (`snap_begin "01-base-packages"` / `snap
 
 ## Gotchas
 
+- Arch splits bluez into `bluez` (daemon), `bluez-utils` (bluetoothctl, which TW's bluez includes) and the unrelated `bluez-tools` project (`bt-agent`, built in layer 05). Don't assume an Arch package is part of a same-named TW package: check its files (`pacman -Fl` on Arch, or the upstream project).
+
 - Before a real run, dry-run with `zypper install --dry-run` to catch conflicts.
 - `ffmpeg` resolves to Packman's ffmpeg 9 (from layer 00). That pulls in libavcodec63 next to the older 62 that other packages still use.
 - In verify scripts that run under `set -o pipefail`, don't pipe big outputs into `grep -q`: the producer gets SIGPIPE and the check falsely fails. Capture to a variable first.

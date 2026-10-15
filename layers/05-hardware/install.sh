@@ -17,13 +17,13 @@ HARDWARE_SKIP="pacman.sh"
 require_user
 
 check_builder_snapshot
-build_packages omageeko
+build_packages omageeko bluez-tools
 
 snap_begin "05-hardware"
 
 mapfile -t packages < <(map_packages 05)
 zypper_install "${packages[@]}"
-install_local_rpms omageeko omageeko-settings omageeko-session omageeko-hardware
+install_local_rpms omageeko omageeko-settings omageeko-session omageeko-hardware bluez-tools
 
 log "Running Omarchy's install/hardware scripts (skipping: $HARDWARE_SKIP)"
 sudo env OMARCHY_PATH=/usr/share/omarchy OMARCHY_INSTALL=/usr/share/omarchy/install \
@@ -55,6 +55,7 @@ rm -f ~/.config/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
 systemctl --user restart wireplumber
 # bt-agent is part of the graphical session (uwsm); start it if that session is up
 if systemctl --user is-active --quiet graphical-session.target; then
+  systemctl --user reset-failed bt-agent.service 2>/dev/null || true
   systemctl --user restart bt-agent.service || true
 fi
 

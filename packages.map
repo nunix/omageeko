@@ -139,7 +139,7 @@ sddm                   -  -                                # decision: keep ligh
 # --- 07: system services
 power-profiles-daemon  05 power-profiles-daemon
 bluez                  05 bluez
-bluez-tools            -  -                                # TW's bluez ships the CLI tools
+bluez-tools            05 @build                                # bt-agent for Omarchy's pairing agent; not in TW (NOT part of bluez)
 bluez-utils            -  -                                # TW's bluez ships the CLI tools
 bolt                   07 bolt
 cups                   07 cups

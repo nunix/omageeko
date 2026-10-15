@@ -6,11 +6,12 @@ You are rebuilding layer 05 of **omageeko** (Omarchy `quattro` on openSUSE Tumbl
 
 Make the laptop hardware work the Omarchy way:
 
-1. Install `map_packages 05` (bluez, power-profiles-daemon, libfprint-2-2, fprintd, fprintd-pam, usbutils, libvulkan_radeon) and the `omageeko-hardware` RPM.
-2. Run **Omarchy's own** `install/hardware/all.sh` as root. Each script gates itself on a hardware match. Provide `run_logged` and skip the Arch-only `pacman.sh`. Env: `OMARCHY_PATH`, `OMARCHY_INSTALL`, PATH with `/usr/share/omarchy/bin`. Leaf scripts use `omarchy-pkg-add`, so Arch names they pass need `packages.map` entries (`vulkan-radeon`, `libfprint-git`, …).
-3. Enable and start `bluetooth.service` and `power-profiles-daemon.service`.
-4. Run `omarchy-apply-lock`. The Quickshell lock screen **refuses to lock** while `/etc/pam.d/omarchy-lock-password` is missing.
-5. Remove any user-level copy of the audio label rule and restart wireplumber.
+1. Build and install `bluez-tools` (packages/bluez-tools, port of Arch extra/bluez-tools). It provides `bt-agent`, which Omarchy's `bt-agent.service` runs as the auto-accept pairing agent. **It is not part of bluez and not packaged by TW.** Without it bluetoothd logs `No agent available` and devices loop between connecting and pairing.
+2. Install `map_packages 05` (bluez, power-profiles-daemon, libfprint-2-2, fprintd, fprintd-pam, usbutils, libvulkan_radeon) and the `omageeko-hardware` RPM.
+3. Run **Omarchy's own** `install/hardware/all.sh` as root. Each script gates itself on a hardware match. Provide `run_logged` and skip the Arch-only `pacman.sh`. Env: `OMARCHY_PATH`, `OMARCHY_INSTALL`, PATH with `/usr/share/omarchy/bin`. Leaf scripts use `omarchy-pkg-add`, so Arch names they pass need `packages.map` entries (`vulkan-radeon`, `libfprint-git`, …).
+4. Enable and start `bluetooth.service` and `power-profiles-daemon.service`.
+5. Run `omarchy-apply-lock`. The Quickshell lock screen **refuses to lock** while `/etc/pam.d/omarchy-lock-password` is missing.
+6. Remove any user-level copy of the audio label rule and restart wireplumber.
 
 ## Tumbleweed deltas (in packages/omageeko)
 
@@ -27,6 +28,7 @@ Make the laptop hardware work the Omarchy way:
 
 `layers/05-hardware/verify.sh` must exit 0. It checks:
 - the hardware RPM
+- bt-agent installed, and `bt-agent.service` running in the uwsm session
 - bluetooth active with a controller visible
 - ppd active with performance/balanced/power-saver profiles
 - the audio node nicks (no codec names)
@@ -38,3 +40,5 @@ Fingerprint enrollment is reported as info until done.
 Extra lock-stack check without a real password: `/tmp/omageeko-tools/pamcheck.py`, a ctypes PAM client (TW has no pamtester). Run a wrong-password attempt against `omarchy-lock-password` and confirm the journal shows `pam_unix(omarchy-lock-password:auth): authentication failure`. Then run `faillock --user $USER --reset`.
 
 **Manual:** `omarchy-setup-security-fingerprint` (interactive enrollment), the lock screen (Super+Ctrl+L), Bluetooth pairing in the panel, and switching to the headset in the audio panel.
+
+A device stuck from pairing attempts without an agent stays half-connected: `bluetoothctl remove <mac>`, then pair again (panel, or `bluetoothctl pair <mac>` + `trust`).

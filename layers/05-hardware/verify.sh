@@ -13,6 +13,12 @@ check "omageeko-hardware installed" rpm -q omageeko-hardware
 
 # Bluetooth
 check "bluetooth.service active" systemctl is-active bluetooth.service
+check "bt-agent installed (bluez-tools)" command -v bt-agent
+if systemctl --user is-active --quiet graphical-session.target; then
+  check "pairing agent running (bt-agent.service)" systemctl --user is-active bt-agent.service
+else
+  info "not in the uwsm session: bt-agent.service starts with graphical-session.target"
+fi
 check "Bluetooth controller visible" bash -c 'bluetoothctl show | grep -q "Controller"'
 
 # Power profiles
