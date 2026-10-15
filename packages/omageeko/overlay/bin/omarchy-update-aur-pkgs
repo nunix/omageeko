@@ -9,3 +9,8 @@ if command -v flatpak &>/dev/null && [[ -n $(flatpak list --app --columns=applic
   flatpak update --user --noninteractive 2>/dev/null || true
   echo
 fi
+
+# omageeko: apps from Omarchy's Arch repo in the omageeko distrobox
+if command -v omageeko-box &>/dev/null; then
+  omageeko-box update || exit 1
+fi

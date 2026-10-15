@@ -19,4 +19,3 @@ omarchy-install-gaming-steam	layer 06	needs Tumbleweed Steam packages
 omarchy-install-gaming-retroarch	layer 06	needs Tumbleweed RetroArch packages
 omarchy-install-service-sunshine	layer 06	needs Tumbleweed Sunshine packages and firewalld
 omarchy-remove-service-sunshine	layer 06	needs Tumbleweed Sunshine packages and firewalld
-omarchy-install-openclaw-cli	layer 06	needs a Tumbleweed install path

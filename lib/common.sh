@@ -134,6 +134,27 @@ check_builder_snapshot() {
   fi
 }
 
+# fetch_vendor_rpm <name> : publish a vendor-built RPM to the local repo.
+# packages/<name>/vendor.conf (key=value): url=<rpm>, sig=<detached .asc>,
+# key=<signing key fingerprint>. The signature is verified with a throwaway
+# keyring (key fetched by fingerprint from keys.openpgp.org) before publishing.
+fetch_vendor_rpm() {
+  local name=$1 conf="$OMAGEEKO_ROOT/packages/$1/vendor.conf" url sig key tmp gnupg arch
+  url=$(sed -n 's/^url=//p' "$conf"); sig=$(sed -n 's/^sig=//p' "$conf"); key=$(sed -n 's/^key=//p' "$conf")
+  [[ -n $url && -n $sig && -n $key ]] || die "$conf needs url=, sig= and key="
+  tmp=$(mktemp -d); gnupg=$(mktemp -d)
+  curl -fsSL --retry 3 -o "$tmp/pkg.rpm" "$url" && curl -fsSL --retry 3 -o "$tmp/pkg.rpm.asc" "$sig" ||
+    { rm -rf "$tmp" "$gnupg"; return 1; }
+  GNUPGHOME=$gnupg gpg -q --keyserver hkps://keys.openpgp.org --recv-keys "$key" 2>/dev/null &&
+    GNUPGHOME=$gnupg gpg -q --verify "$tmp/pkg.rpm.asc" "$tmp/pkg.rpm" 2>/dev/null ||
+    { warn "Signature check failed for $url"; rm -rf "$tmp" "$gnupg"; return 1; }
+  arch=$(rpm -qp --qf '%{ARCH}' "$tmp/pkg.rpm" 2>/dev/null)
+  mkdir -p "$OMAGEEKO_REPO_DIR/$arch"
+  mv "$tmp/pkg.rpm" "$OMAGEEKO_REPO_DIR/$arch/${url##*/}"
+  rm -rf "$tmp" "$gnupg"
+  in_builder createrepo_c --quiet --update /repo
+}
+
 # build_packages name... : build changed packages into the local repo
 build_packages() {
   local name spec stamp log_file
@@ -141,6 +162,17 @@ build_packages() {
   sudo zypper --non-interactive --quiet refresh >/dev/null
   for name in "$@"; do
     spec="packages/$name/$name.spec"
+    if [[ -f $OMAGEEKO_ROOT/packages/$name/vendor.conf ]]; then
+      stamp=$(package_stamp "$name")
+      if needs_build "$name" "$stamp"; then
+        log "Fetching vendor RPM $name"
+        fetch_vendor_rpm "$name" || die "Vendor RPM fetch failed for $name"
+        echo "$stamp" > "$STAMP_DIR/$name"
+      else
+        log "$name is up to date"
+      fi
+      continue
+    fi
     [[ -f $OMAGEEKO_ROOT/$spec ]] || die "Missing spec: $spec"
     # Optional generated inputs (e.g. omageeko's pkgmap.tsv), refreshed before stamping
     if [[ -x $OMAGEEKO_ROOT/packages/$name/prepare.sh ]]; then

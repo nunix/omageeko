@@ -1,0 +1,161 @@
+#!/bin/bash
+
+# omarchy:summary=Manage apps installed from Omarchy's Arch repo in the omageeko distrobox
+# omarchy:args=<ensure|install|remove|has|update|list> [packages...]
+# omarchy:hidden=true
+# omageeko: pacman-inside-box (runs pacman only inside the Arch distrobox)
+# omageeko: apps without a Tumbleweed, vendor or Flathub source run from one Arch
+# distrobox that uses Omarchy's own package repo (pkgs.omarchy.org, packages
+# signature-checked against the Omarchy key), so they are exactly Omarchy's builds.
+# packages.map routes them here with @box:<pkg>.
+#
+# Exports: every .desktop file of an installed package (distrobox-export --app),
+# a hidden alias under the package's original desktop id so Omarchy's
+# gtk-launch calls keep working, and its /usr/bin commands only when the host has
+# no command of that name (a box `claude` must never shadow a native one).
+
+set -euo pipefail
+
+BOX=${OMAGEEKO_BOX:-omageeko-arch}
+IMAGE=docker.io/library/archlinux:latest
+OMARCHY_KEY=40DFB630FF42BCFFB047046CF0134EE680CAC571
+OMARCHY_REPO='https://pkgs.omarchy.org/stable/$arch'
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omageeko"
+STATE="$STATE_DIR/box-packages"
+EXPORTS="$STATE_DIR/box-exports"
+APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+BIN="$HOME/.local/bin"
+
+box_exists() {
+  podman container exists "$BOX" 2>/dev/null
+}
+
+in_box() {
+  distrobox enter --name "$BOX" -- "$@"
+}
+
+ensure() {
+  if ! box_exists; then
+    echo "Creating the $BOX distrobox (Arch Linux + Omarchy's package repo)..."
+    distrobox create --yes --name "$BOX" --image "$IMAGE"
+  fi
+  # Idempotent: keyring, Omarchy key and repo, the same way Omarchy trusts them.
+  # Arch's default SigLevel (Required DatabaseOptional) applies: Omarchy's
+  # database is unsigned, every package must carry a valid signature.
+  in_box bash -c '
+    set -e
+    [[ -s /etc/pacman.d/gnupg/pubring.gpg ]] || { sudo pacman-key --init; sudo pacman-key --populate archlinux; }
+    if ! sudo pacman-key --list-keys '"$OMARCHY_KEY"' &>/dev/null; then
+      sudo pacman-key --recv-keys '"$OMARCHY_KEY"' --keyserver keys.openpgp.org
+      sudo pacman-key --lsign-key '"$OMARCHY_KEY"'
+    fi
+    if ! grep -q "^\[omarchy\]" /etc/pacman.conf; then
+      printf "\n[omarchy]\nServer = %s\n" '"'$OMARCHY_REPO'"' | sudo tee -a /etc/pacman.conf >/dev/null
+      sudo pacman -Syu --noconfirm
+    fi
+  ' >/dev/null
+  mkdir -p "$STATE_DIR"
+  touch "$STATE" "$EXPORTS"
+}
+
+record() {
+  grep -qx "$1" "$STATE" 2>/dev/null || echo "$1" >> "$STATE"
+}
+
+forget() {
+  local re
+  re=$(printf '%s' "$1" | sed 's/[.[\*^$/]/\\&/g')
+  sed -i "/^$re\$/d" "$STATE" 2>/dev/null || true
+  sed -i "/^$re /d" "$EXPORTS" 2>/dev/null || true
+}
+
+export_package() {
+  local pkg=$1 file id exported cmd
+  while IFS= read -r file; do
+    id=$(basename "$file" .desktop)
+    in_box distrobox-export --app "$file" >/dev/null 2>&1 || continue
+    exported="$APPS/$BOX-$id.desktop"
+    [[ -f $exported ]] || continue
+    echo "$pkg app $exported" >> "$EXPORTS"
+    # Hidden alias under the original id for Omarchy's gtk-launch <desktop-id> calls
+    if [[ ! -e $APPS/$id.desktop ]]; then
+      sed -e '/^NoDisplay=/d' -e '/^\[Desktop Entry\]/a NoDisplay=true' "$exported" > "$APPS/$id.desktop"
+      echo "$pkg alias $APPS/$id.desktop" >> "$EXPORTS"
+    fi
+  done < <(in_box bash -c "pacman -Qlq '$pkg' | grep -E '^/usr/share/applications/[^/]+\\.desktop\$'" 2>/dev/null)
+
+  while IFS= read -r file; do
+    cmd=$(basename "$file")
+    # Never shadow a host command (native installs, Omarchy's mise wrappers, ...)
+    if command -v "$cmd" &>/dev/null || [[ -e $BIN/$cmd ]]; then
+      continue
+    fi
+    in_box distrobox-export --bin "$file" --export-path "$BIN" >/dev/null 2>&1 &&
+      echo "$pkg bin $BIN/$cmd" >> "$EXPORTS"
+  done < <(in_box bash -c "pacman -Qlq '$pkg' | grep -E '^/usr/bin/[^/]+\$'" 2>/dev/null)
+}
+
+unexport_package() {
+  local pkg=$1 kind path
+  while read -r owner kind path; do
+    [[ $owner == "$pkg" ]] || continue
+    case "$kind" in
+      app) in_box distrobox-export --app "$(basename "$path" .desktop | sed "s/^$BOX-//")" --delete >/dev/null 2>&1 || rm -f "$path" ;;
+      alias | bin) rm -f "$path" ;;
+    esac
+  done < <(cat "$EXPORTS" 2>/dev/null)
+}
+
+cmd=${1:-}
+shift || true
+
+case "$cmd" in
+  ensure)
+    ensure
+    ;;
+  install)
+    (( $# )) || { echo "Usage: omageeko-box install <packages...>" >&2; exit 1; }
+    ensure
+    in_box sudo pacman -S --needed --noconfirm "$@"
+    for pkg in "$@"; do
+      unexport_package "$pkg"
+      forget "$pkg"
+      export_package "$pkg"
+      record "$pkg"
+    done
+    command -v update-desktop-database &>/dev/null && update-desktop-database "$APPS" 2>/dev/null || true
+    ;;
+  remove)
+    (( $# )) || { echo "Usage: omageeko-box remove <packages...>" >&2; exit 1; }
+    box_exists || exit 0
+    for pkg in "$@"; do
+      unexport_package "$pkg"
+    done
+    in_box sudo pacman -Rns --noconfirm "$@" || true
+    for pkg in "$@"; do
+      forget "$pkg"
+    done
+    ;;
+  has)
+    [[ -n ${1:-} ]] && grep -qx "$1" "$STATE" 2>/dev/null
+    ;;
+  update)
+    box_exists || exit 0
+    [[ -s $STATE ]] || exit 0
+    echo -e "\e[32m\nUpdate omageeko box apps ($BOX)\e[0m"
+    in_box sudo pacman -Syu --noconfirm
+    while read -r pkg; do
+      [[ -n $pkg ]] || continue
+      unexport_package "$pkg"
+      sed -i "/^$pkg /d" "$EXPORTS"
+      export_package "$pkg"
+    done < "$STATE"
+    ;;
+  list)
+    cat "$STATE" 2>/dev/null || true
+    ;;
+  *)
+    echo "Usage: omageeko-box <ensure|install|remove|has|update|list> [packages...]" >&2
+    exit 1
+    ;;
+esac

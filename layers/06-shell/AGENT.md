@@ -13,11 +13,26 @@ You are rebuilding layer 06 of **omageeko** (Omarchy `quattro` on openSUSE Tumbl
 | `@flatpak:<id>` | Flathub, system-wide (Spotify, Signal, Slack, Zen, Dropbox, Heroic, Minecraft, Zed) |
 | `@build:<rpm>` | local RPM: the six menu Nerd fonts come from `packages/nerd-fonts-extra` (published, installed on demand) |
 | `@none` | nothing to install on TW (e.g. `umu-launcher`; Lutris fetches its own) |
+| `@box:<pkg>` | Omarchy's own Arch package inside the `omageeko-arch` distrobox (`omageeko-box`) |
 | `-` + note | not ported yet. The install prints the reason instead of failing inside zypper |
 
 User decisions (2026-10-15): proprietary apps come from the vendor repo where one exists, else Flathub. Nerd fonts are one local RPM each.
 
 On-demand entries use the `-` layer, so `map_packages 06` installs nothing up front.
+
+**Apps without a TW, vendor or Flathub source (user decision 2026-10-15: hybrid):**
+- **Box** (`omageeko-box`, overlay bin; `omageeko` requires distrobox + podman): claude-desktop, openai-codex-desktop, perplexity, grok-bot, t3code-bin, hermes-desktop, lmstudio-bin, plus zed and omazed (Zed moves from Flathub so omazed and Zed share `~/.config/zed`).
+  - One Arch distrobox `omageeko-arch` (archlinux:latest) with Omarchy's repo `https://pkgs.omarchy.org/stable/$arch`. The Omarchy key 40DFB630… is received and locally signed. Arch's default `SigLevel = Required DatabaseOptional` applies: the database is unsigned (its `.sig` is a 404), every package signature is required. Don't set `SigLevel = Required` on the section, or sync fails.
+  - `omageeko-box install`: `pacman -S --needed`, export each package `.desktop` (`distrobox-export --app`), and add a hidden alias under the original desktop id for Omarchy's `gtk-launch <id>` calls. `/usr/bin` commands are exported to `~/.local/bin` **only when the host has no command of that name**: claude-desktop's Arch package ships `claude`, which must never shadow a native Claude Code.
+  - State lives in `~/.local/state/omageeko/box-{packages,exports}`. `has` reads it (fast menu "installed" checks), `remove` unexports and runs `pacman -Rns`, and `update` runs `pacman -Syu` and re-exports. `omarchy-update-aur-pkgs` calls `omageeko-box update`, so `omarchy update` covers the box.
+  - `# omageeko: pacman-inside-box` opts the helper out of the spec's no-pacman `%check` and layer 03's verify.
+  - Layer 06 adopts an existing box: any `@box` package already installed gets recorded and re-exported.
+- **Native local packages** (published, installed on demand):
+  - `packages/voxtype/vendor.conf`: the **vendor's signed RPM**. `fetch_vendor_rpm` in lib/common.sh verifies the detached signature with a throwaway keyring (key by fingerprint), then publishes. `build_packages` handles `vendor.conf` packages.
+  - `packages/once` (binary + system service; `Requires: podman-docker`. An OR with docker made libsolv pick real Docker).
+  - `packages/openclaw` (npm global install into the package, plus a `/usr/share/openclaw` seed so `omarchy-install-openclaw-cli` works; that command is no longer a stub).
+  - `packages/omarchy-emacs` (noarch; requires `emacs-x11`, TW's GUI Emacs).
+- **Vendor repo:** symfony-cli (Cloudsmith) in `repos.tsv`.
 
 **Supporting changes:**
 - `omageeko` requires `flatpak`. Its `/etc/profile.d` snippet adds Flatpak exports to `XDG_DATA_DIRS` from the next login.
@@ -35,7 +50,7 @@ On-demand entries use the `-` layer, so `map_packages 06` installs nothing up fr
 3. Add Flathub system-wide.
 4. Restart the shell (`omarchy-restart-shell`) to reload the menu.
 
-**Verify:** flatpak and Flathub, `repos.tsv`, the font RPMs published, the menu edits, update-time on chrony, and `pkgaudit.py` reporting `broken=0`.
+**Verify:** natives published, distrobox/omageeko-box present, the box on Omarchy's repo, flatpak and Flathub, `repos.tsv`, the font RPMs published, the menu edits, update-time on chrony, and `pkgaudit.py` reporting `broken=0`.
 
 ## Next parts
 06b Setup, 06c Trigger, 06d Style, 06e System, 06f Learn, 06g bar/panels: reviewed with the user in the running session.

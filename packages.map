@@ -3,6 +3,7 @@
 #   layer  = omageeko layer that installs it (01 base, 02 build, 04 session, 05 hardware, 06 shell, 07 login-boot, 08 system, 09 apps)
 #   @repo:<alias>:<rpm> = vendor RPM repo from packages/omageeko/overlay/share/repos.tsv (enabled on first use)
 #   @none  = nothing to install on Tumbleweed (treated as present)
+#   @box:<pkg> = Omarchy's Arch package in the omageeko-arch distrobox (omageeko-box)
 #   @build = RPM built from packages/<name> (@build:<rpm> when the RPM name differs from the Arch name)
 #   -      = intentionally skipped (reason in note); a "-" layer with a real target is
 #            not installed by any layer but still translated for omarchy-pkg-add
@@ -223,7 +224,7 @@ dropbox                -  @flatpak:com.dropbox.Client
 nautilus-dropbox       -  @none                            # Flathub Dropbox has no Nautilus extension
 heroic-games-launcher-bin -  @flatpak:com.heroicgameslauncher.hgl
 minecraft-launcher     -  @flatpak:com.mojang.Minecraft
-zed                    -  @flatpak:dev.zed.Zed
+zed                    -  @box:zed                         # Arch extra in the box, so omazed and Zed share ~/.config/zed
 bitwarden              -  bitwarden                        # native on TW
 bitwarden-cli          -  @none                            # not on TW/Flathub; `mise use -g npm:@bitwarden/cli` if needed
 # Same software, Tumbleweed names
@@ -249,17 +250,19 @@ ttf-firacode-nerd      -  @build:firacode-nerd-fonts
 ttf-victor-mono-nerd   -  @build:victor-mono-nerd-fonts
 ttf-bitstream-vera-mono-nerd -  @build:bitstream-vera-mono-nerd-fonts
 ttf-iosevka-nerd       -  @build:iosevka-nerd-fonts
-# Omarchy/AUR repackages not ported yet: the install says so instead of failing in zypper
-claude-desktop         -  -                                # not ported yet (omarchy-pkgs repackage)
-openai-codex-desktop   -  -                                # not ported yet (omarchy-pkgs repackage)
-hermes-desktop         -  -                                # not ported yet (omarchy-pkgs repackage)
-t3code-bin             -  -                                # not ported yet (omarchy-pkgs repackage)
-grok-bot               -  -                                # not ported yet (omarchy-pkgs repackage)
-perplexity             -  -                                # not ported yet (omarchy-pkgs repackage)
-once-bin               -  -                                # not ported yet (omarchy-pkgs repackage)
-openclaw               -  -                                # not ported yet (omarchy-pkgs repackage)
-lmstudio-bin           -  -                                # not ported yet: AppImage only (no repo/Flathub)
-omazed                 -  -                                # not ported yet (Omarchy Zed config package)
-omarchy-emacs          -  -                                # not ported yet (Omarchy Emacs config package)
-voxtype-bin            -  -                                # not ported yet (dictation, omarchy-pkgs)
-symfony-cli            -  -                                # not ported yet (vendor binary)
+# Omarchy/AUR repackages without a TW/vendor/Flathub source: Omarchy's own builds in the
+# omageeko distrobox (@box, omageeko-box; user decision 2026-10-15), or native local RPMs
+claude-desktop         -  @box:claude-desktop
+openai-codex-desktop   -  @box:openai-codex-desktop
+hermes-desktop         -  @box:hermes-desktop
+t3code-bin             -  @box:t3code-bin
+grok-bot               -  @box:grok-bot
+perplexity             -  @box:perplexity
+once-bin               -  @build:once                      # needs podman-docker (Docker CLI/socket via podman)
+openclaw               -  @build:openclaw                  # also seeds omarchy-install-openclaw-cli (/usr/share/openclaw)
+lmstudio-bin           -  @box:lmstudio-bin  # AppImage build; GPU via /dev/dri in the box
+omazed                 -  @box:omazed  # rewrites ~/.config/zed on theme changes (shared $HOME)
+omarchy-emacs          -  @build:omarchy-emacs
+voxtype-bin            -  @build:voxtype                   # vendor's signed RPM (packages/voxtype/vendor.conf)
+symfony-cli            -  @repo:symfony:symfony-cli        # vendor RPM repo (Cloudsmith)
+emacs-wayland          -  emacs-x11                        # Tumbleweed's GUI Emacs

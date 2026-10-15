@@ -40,6 +40,9 @@ Requires:       xdg-user-dirs
 Requires:       libnotify-tools
 # omarchy-pkg-add installs Flathub apps where Tumbleweed has no package (omageeko's AUR stand-in)
 Requires:       flatpak
+# omageeko-box: apps from Omarchy's Arch repo in a distrobox
+Requires:       distrobox
+Requires:       podman
 # Scripts are run by Omarchy's own launchers; don't derive interpreter/module deps
 %global __requires_exclude_from ^%{_datadir}/omarchy/.*$
 
@@ -242,6 +245,8 @@ done
 # Stubs and overlay must not leave pacman calls in the commands we touched
 # (code lines only: upstream's # omarchy:summary= text still says "pacman")
 for f in $(cut -f1 %{_sourcedir}/overlay/stubs.tsv | grep -v '^#') $(ls %{_sourcedir}/overlay/bin); do
+  # Commands that run pacman inside the Arch distrobox opt out explicitly
+  grep -q '^# omageeko: pacman-inside-box' %{buildroot}%{_bindir}/$f && continue
   if grep -vE '^[[:space:]]*#' %{buildroot}%{_bindir}/$f | grep -qE '(^|[[:space:];&|(`])(pacman|yay|expac|paccache|checkupdates)([[:space:]]|$)'; then
     echo "pacman left in $f" >&2
     exit 1
@@ -251,6 +256,7 @@ done
 %files
 %license LICENSE
 %{_bindir}/omarchy*
+%{_bindir}/omageeko-box
 %exclude %{_bindir}/omarchy-upload-log
 %exclude %{_bindir}/omarchy-debug
 %exclude %{_bindir}/omarchy-debug-idle

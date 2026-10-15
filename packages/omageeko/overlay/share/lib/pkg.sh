@@ -10,6 +10,7 @@ OMAGEEKO_REPOS=${OMAGEEKO_REPOS:-/usr/share/omageeko/repos.tsv}
 #   rpm:<name>              install/query with zypper/rpm
 #   repo:<alias>:<name>     rpm from a vendor repo (repos.tsv), enabled on first use
 #   flatpak:<id>            install/query with flatpak (Flathub)
+#   box:<pkg>               Omarchy's Arch package inside the omageeko distrobox (omageeko-box)
 #   none:                   nothing to install on Tumbleweed (counts as present)
 #   skip:<reason>           intentionally not available on omageeko
 # Names absent from the map are assumed to share the Arch name.
@@ -28,6 +29,7 @@ omageeko_pkg_resolve() {
     @repo:*:*) echo "repo:${target#@repo:}" ;;
     @repo:*) echo "rpm:$name" ;;
     @none) echo "none:" ;;
+    @box:*) echo "box:${target#@box:}" ;;
     *) tr ',' '\n' <<<"$target" | sed 's/^/rpm:/' ;;
   esac
 }
@@ -44,6 +46,7 @@ omageeko_pkg_installed() {
       rpm:*) rpm -q --whatprovides -- "${target#rpm:}" &>/dev/null || return 1 ;;
       repo:*) rpm -q --whatprovides -- "${target##*:}" &>/dev/null || return 1 ;;
       flatpak:*) omageeko_flatpak_installed "${target#flatpak:}" || return 1 ;;
+      box:*) omageeko-box has "${target#box:}" || return 1 ;;
       none:*) ;;
       skip:*) return 1 ;;
     esac

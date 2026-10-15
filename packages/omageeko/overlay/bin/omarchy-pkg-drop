@@ -9,6 +9,7 @@ source /usr/share/omageeko/lib/pkg.sh
 
 rpms=()
 flatpaks=()
+boxes=()
 declare -A selected=()
 
 for pkg in "$@"; do
@@ -19,6 +20,12 @@ for pkg in "$@"; do
         if [[ -z ${selected[$name]} ]] && rpm -q -- "$name" &>/dev/null; then
           rpms+=("$name")
           selected[$name]=1
+        fi
+        ;;
+      box:*)
+        name=${target#box:}
+        if omageeko-box has "$name"; then
+          boxes+=("$name")
         fi
         ;;
       flatpak:*)
@@ -39,6 +46,11 @@ fi
 
 if (( ${#flatpaks[@]} )); then
   omageeko_sudo flatpak uninstall --system --noninteractive "${flatpaks[@]}" || exit 1
+fi
+
+
+if (( ${#boxes[@]} )); then
+  omageeko-box remove "${boxes[@]}" || exit 1
 fi
 
 exit 0

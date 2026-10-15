@@ -12,6 +12,11 @@ echo "06a: Install / Remove / Update"
 check "flatpak installed" command -v flatpak
 check "Flathub remote (system)" bash -c 'flatpak remotes --system | grep -q flathub'
 check "vendor repo registry shipped" test -s /usr/share/omageeko/repos.tsv
+check "native on-demand packages published (voxtype, once, openclaw, omarchy-emacs)" bash -c 'for p in voxtype once openclaw omarchy-emacs; do ls /var/lib/omageeko/repo/*/$p-[0-9]*.rpm >/dev/null || exit 1; done'
+check "distrobox + omageeko-box available" bash -c 'command -v distrobox && command -v omageeko-box'
+if podman container exists omageeko-arch 2>/dev/null; then
+  check "box uses Omarchy's repo" distrobox enter --name omageeko-arch -- grep -q "^\[omarchy\]" /etc/pacman.conf
+fi
 check "font subpackages published (not installed)" bash -c 'ls /var/lib/omageeko/repo/noarch/iosevka-nerd-fonts-*.rpm'
 M=/usr/share/omarchy/default/omarchy/omarchy-menu.jsonc
 check "menu: AUR entry is Flathub" grep -q '"install.aur": {[^}]*"label":"Flathub"' "$M"

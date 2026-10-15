@@ -20,7 +20,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-update-keyring | `zypper refresh` (repo keys are zypper's) |
 | omarchy-update-pacman-guard | no-op (no pacman hooks) |
 | omarchy-update-orphan-pkgs | zypper `--unneeded` set; reports only under `-y`, removal always asks (patterns can make packages look unneeded) |
-| omarchy-update-aur-pkgs | `flatpak update` |
+| omarchy-update-aur-pkgs | `flatpak update` + `omageeko-box update` |
 | omarchy-update-analyze-logs | warns on dracut/sdbootutil errors |
 | omarchy-update-available | newer TW snapshot (`media.1/products`) + newer omageeko-local RPMs; feeds the bar's update widget |
 | omarchy-version | omageeko RPM version-release |
@@ -55,6 +55,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf` (omageeko-hardware) | readable names for UCM laptop audio nodes (panel labels by node.nick) |
 | `/usr/share/omarchy/logo.txt` and skel `branding/screensaver.txt` | omageeko wordmark (Omarchy's block font; O/M/A glyphs reused) replaces the Omarchy logo; the original is kept at `/usr/share/omageeko/omarchy-logo.txt` |
 | `/usr/bin/omageeko-monitor-wake-kick` + user unit (omageeko-hardware) | re-wake monitors listed in `~/.config/omageeko/monitor-wake-kick` with a DPMS cycle when they reconnect after deep standby (Odyssey G9 quirk) |
+| `/usr/bin/omageeko-box` | apps from Omarchy's Arch repo in the `omageeko-arch` distrobox (`@box:` map targets) |
 | `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports |
 
 ## Menu edits (`menu-transform.py`, run in %prep; fails on upstream drift)
@@ -79,7 +80,7 @@ Enabled on first use by `omarchy-pkg-add` for `@repo:<alias>:<rpm>` map targets:
 
 Not applicable: refresh-limine, refresh-pacman, upgrade-to-quattro, provision-owner, provision-hardware, dev-pkg-test, reinstall-pkgs.
 
-Ported in later layers: system-factory-reset (06), plymouth-set (06), hibernation-* (07), setup/remove-security-sshd (07), install-gaming-steam/retroarch (08), install/remove-service-sunshine (08), install-openclaw-cli (08).
+Ported in later layers: system-factory-reset (06), plymouth-set (06), hibernation-* (07), setup/remove-security-sshd (07), install-gaming-steam/retroarch (08), install/remove-service-sunshine (06).
 
 ## Upstream files not shipped
 

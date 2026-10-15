@@ -29,6 +29,7 @@ if (( installed_bins >= upstream_bins )); then ok "all $upstream_bins upstream c
 leftover=()
 for f in /usr/bin/omarchy-*; do
   grep -q '^# omageeko: stub' "$f" && continue
+  grep -q '^# omageeko: pacman-inside-box' "$f" && continue
   if grep -vE '^[[:space:]]*#' "$f" | grep -qE '(^|[[:space:];&|(`])(sudo +)?(pacman|yay|expac|paccache|checkupdates|makepkg|mkinitcpio|limine[a-z-]*|ufw)([[:space:]]|$)'; then
     leftover+=("$(basename "$f")")
   fi

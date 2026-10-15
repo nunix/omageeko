@@ -59,6 +59,9 @@ for n in sorted(names):
     elif t == "@none": pass
     elif t.startswith("@repo:"):
         parts = t.split(":"); good = len(parts) == 3 and parts[1] in repos; why = f"repo alias {parts[1] if len(parts) > 1 else '?'} missing from repos.tsv"
+    elif t.startswith("@box:"):
+        good = subprocess.run(["distrobox", "enter", "--name", "omageeko-arch", "--", "pacman", "-Si", t[5:]], capture_output=True).returncode == 0
+        why = f"{t[5:]} not in the box's repos (Arch + Omarchy)"
     elif t.startswith("@flatpak:"): good = flathub(t.split(":", 1)[1]); why = f"{t} not on Flathub"
     elif t.startswith("@build"):
         rpm = t.split(":", 1)[1] if ":" in t else n; good = rpm in local_rpms; why = f"{rpm} not built in omageeko-local"
