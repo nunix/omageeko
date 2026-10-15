@@ -16,6 +16,13 @@ SET = [
 ]
 # menu ids to drop (with their children): channels that don't exist on omageeko
 DROP = ["update.channel.rc", "update.channel.edge"]
+# (anchor id, new id, JSON fields): insert a new entry right after the anchor
+INSERT = [
+    ("install.aur", "install.opi", {"icon": "", "label": "OPI",
+        "action": "xdg-terminal-exec --app-id=org.omarchy.terminal omarchy-pkg-opi-install"}),
+    ("remove.package", "remove.flatpak", {"icon": "\U000f03d7", "label": "Flatpak",
+        "action": "xdg-terminal-exec --app-id=org.omarchy.terminal omarchy-pkg-flatpak-remove"}),
+]
 # translated labels to override in every language that defines them (brand names)
 I18N_LABELS = {"install.aur": "Flathub"}
 
@@ -40,6 +47,17 @@ def main():
         text, n = rx.subn("", text)
         if n == 0:
             sys.exit(f"menu-transform: entry {mid} not found to drop")
+    for anchor, mid, fields in INSERT:
+        rx = entry_re(anchor)
+        m = rx.search(text)
+        if not m:
+            sys.exit(f"menu-transform: anchor {anchor} not found for {mid}")
+        if entry_re(mid).search(text):
+            sys.exit(f"menu-transform: {mid} already exists upstream; drop the INSERT rule")
+        indent = re.match(r"\s*", m.group(1)).group(0)
+        line = indent + json.dumps(mid) + ": " + json.dumps(fields, ensure_ascii=False, separators=(",", ":")) + ",\n"
+        end = text.index("\n", m.end(2)) + 1
+        text = text[:end] + line + text[end:]
     MENU.write_text(text)
 
     changed = 0
@@ -55,7 +73,7 @@ def main():
             changed += 1
     if changed == 0:
         sys.exit("menu-transform: no translation defines the overridden labels")
-    print(f"menu-transform: {len(SET)} field edits, {len(DROP)} drops, {changed} translations")
+    print(f"menu-transform: {len(SET)} field edits, {len(DROP)} drops, {len(INSERT)} inserts, {changed} translations")
 
 if __name__ == "__main__":
     main()

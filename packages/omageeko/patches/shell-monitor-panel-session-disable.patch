@@ -1,0 +1,19 @@
+--- a/shell/plugins/panels/monitor/Panel.qml	2026-10-15 14:51:35.155728609 +0200
++++ b/shell/plugins/panels/monitor/Panel.qml	2026-10-15 14:51:35.169045762 +0200
+@@ -308,7 +308,15 @@
+     var expr = enabled
+       ? 'hl.monitor({ output = ' + output + ', disabled = true })'
+       : 'hl.monitor({ output = ' + output + ', disabled = false, mode = "preferred", position = "auto", scale = "auto" })'
+-    actionProc.command = ["hyprctl", "eval", expr]
++    // omageeko (from omaweed): remember displays switched off here for the rest of
++    // the session, so config reloads (theme switches) do not turn them back on.
++    // default/hypr/toggles.lua re-applies the list; $XDG_RUNTIME_DIR resets on logout.
++    var record = enabled
++      ? 'grep -qxF -- "$1" "$f" 2>/dev/null || echo "$1" >> "$f"'
++      : '[ -f "$f" ] && grep -vxF -- "$1" "$f" > "$f.tmp"; [ -f "$f.tmp" ] && mv "$f.tmp" "$f"'
++    actionProc.command = ["bash", "-c",
++      'f="${XDG_RUNTIME_DIR:-/tmp}/omarchy-disabled-monitors"; ' + record + '; hyprctl eval "$2"',
++      "omageeko-monitor", name, expr]
+     if (!actionProc.running) actionProc.running = true
+   }
+ 

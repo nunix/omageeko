@@ -29,6 +29,9 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-channel-current | `stable` (pinned upstream) or `dev` (linked checkout) |
 | omarchy-channel-set | explains omageeko follows `upstream.lock` |
 | omarchy-install-and-launch | Flathub-resolved packages launch with `flatpak run <id>` |
+| omarchy-pkg-flatpak-remove (new, from omaweed) | fzf picker removing system/user Flatpak apps (Remove › Flatpak) |
+| omarchy-pkg-opi-install (new, from omaweed) | opi search over OBS/Packman (Install › OPI) |
+| omarchy-agent-usage-agy / -hermes (new, from omaweed) | Antigravity/Vertex and Hermes usage collectors; no balance emitted when nothing was spent |
 | omarchy-snapshot | create: snapper (all configs). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
 
 ## Patches (`patches/`, applied with `--fuzz=0`)
@@ -47,6 +50,9 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-update-time | chronyd restart + `chronyc makestep` (TW uses chrony) |
 | omarchy-remove-preinstalls | delete `~/.local/bin/{claude,codex,gh,…}` only when they are Omarchy mise wrappers (upstream deleted them unconditionally, which removed a native Claude Code) |
 | omarchy-install-editor-zed | after launching Zed, re-select omazed's "Omazed" theme if Zed's first-run onboarding overwrites `settings.json` (omazed selects it only once, before Zed has run) |
+| shell agents Main.qml | strip `google/`/`vertex/`/`anthropic/` prefixes and `@YYYYMMDD` from model names |
+| shell agents Panel.qml | estimated-spend text for agents without prepaid credit |
+| shell monitor Panel.qml + default/hypr/toggles.lua | displays switched off in the panel stay off for the session (`$XDG_RUNTIME_DIR/omarchy-disabled-monitors`) |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 
 ## Added files (`overlay/share/`)
@@ -67,11 +73,14 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 |---|---|
 | install.package, remove.package | openSUSE logo instead of Arch |
 | install.aur | label "Flathub" (all translations), package icon |
+| install.opi, remove.flatpak | inserted (after install.aur / remove.package) |
 | update.channel.rc, update.channel.edge | dropped (omageeko: Stable = pinned upstream, Dev = linked checkout) |
 
 ## Vendor repositories (`overlay/share/repos.tsv` → /usr/share/omageeko/repos.tsv)
 
 Enabled on first use by `omarchy-pkg-add` for `@repo:<alias>:<rpm>` map targets: mise, google-chrome, microsoft-edge, vscode, brave, 1password, nordvpn, cursor, sublime-text.
+
+Shell tree additions: `overlay/shell/` is copied over `shell/` (agy/hermes agent icons).
 
 ## Path changes
 

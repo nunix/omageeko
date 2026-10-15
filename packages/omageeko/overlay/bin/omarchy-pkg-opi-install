@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# omarchy:summary=Search the openSUSE Build Service (home repos, Packman, vendors) with opi and install
+# omarchy:requires-sudo=true
+# omageeko: from the omaweed branch. opi lists matching OBS/Packman packages and asks
+# before adding any repository; OBS home repos are not reviewed by openSUSE.
+
+omarchy-pkg-add opi || exit 1
+
+query=$(gum input --prompt 'OPI search> ' --placeholder 'package name or keyword')
+
+if [[ -n $query ]]; then
+  opi "$query"
+  omarchy-show-done
+fi

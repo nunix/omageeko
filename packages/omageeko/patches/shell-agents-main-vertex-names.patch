@@ -1,0 +1,14 @@
+--- a/shell/plugins/agents/Main.qml	2026-10-15 14:50:34.682237581 +0200
++++ b/shell/plugins/agents/Main.qml	2026-10-15 14:50:34.695021660 +0200
+@@ -809,7 +809,10 @@
+   // version and title-case the words around it.
+   function friendlyModelName(id) {
+     if (!id) return I18n.t("agents.unknownModel")
+-    var name = String(id).replace(/^claude-/, "").replace(/-\d{8}$/, "")
++    // omageeko (from omaweed): Vertex AI ids carry a provider prefix and an
++    // @YYYYMMDD version suffix (google/gemini-..., vertex/claude-...@20250929).
++    var name = String(id).replace(/^(google|vertex|anthropic)\//, "").replace(/^claude-/, "")
++      .replace(/[-@]\d{8}$/, "")
+     var parts = name.split("-")
+     var words = []
+     var version = []

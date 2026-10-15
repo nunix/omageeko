@@ -23,3 +23,7 @@
 - Fixed by 06b: screenshots (omasnap), file manager (nautilus, + sushi previews, python extensions), Share (localsend CLI), screen recording webcam overlay (v4l2-ctl), media (mpv, imv), PDF (evince), disks, herdr launcher/keybindings, Neovim (LazyVim, 52 plugins, Omarchy theme link).
 - Still open: 06c Trigger details (speed tests, hardware toggles); 06d Setup: `omarchy-locale-generate` (locale-gen, Arch), `omarchy-setup-direct-boot` (limine/UKI EFI entry; meaningless on systemd-boot), sudoless docker → podman, DNS live test; 06e Learn (Arch wiki → openSUSE). Later layers: plymouth (Style › Unlock), factory reset, sshd/firewalld, hibernation.
 - Share limitation: files must be under $HOME or /tmp (box mounts).
+
+## omaweed port (2026-10-15)
+- See `archive/omaweed/README.md`. Ported: agy/Hermes usage, Vertex model names, estimated spend, Remove › Flatpak, Install › OPI, session-persistent monitor disable, migration audit. `menu-transform.py` gained INSERT rules.
+- Not visually verified yet: the monitor panel persistence (disable a display, switch theme, it should stay off) and the new menu entries.

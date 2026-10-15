@@ -40,6 +40,10 @@ The build/stamp/install helpers are shared in `lib/common.sh`.
 - `/var/log/zypp/history` is root-only, so use the rpm database for user-level queries.
 - `/run/zypp.pid` always exists. A transaction runs only while it holds a live PID.
 
+## Upstream bumps and migrations
+
+Shipped migrations are marked done at provisioning, but migrations added by a newer `upstream.lock` run at the next login or `omarchy update`. Many are Arch-specific (27 of the shipped ones touch pacman, limine, mkinitcpio, ufw or systemd-resolved). After a bump, run `layers/03-omarchy-core/tools/migration-audit.sh`. For each `ARCH` line, either ship a patch for that migration or mark it done (`touch ~/.local/state/omarchy/migrations/<name>.sh`) with the reason in `overlay/INDEX.md`. Layer 03 verify fails while Arch-coupled migrations are pending.
+
 ## Verification
 
 `layers/03-omarchy-core/verify.sh` must exit 0. It checks:

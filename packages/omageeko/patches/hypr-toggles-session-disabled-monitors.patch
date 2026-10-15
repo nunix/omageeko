@@ -1,0 +1,20 @@
+--- a/default/hypr/toggles.lua	2026-10-15 14:51:35.158377508 +0200
++++ b/default/hypr/toggles.lua	2026-10-15 14:51:35.169143719 +0200
+@@ -21,3 +21,17 @@
+ disabled_input_device("touchscreen")
+ 
+ require("default.hypr.workspace-layouts")
++
++-- omageeko (from omaweed): displays switched off from the monitor panel stay off for
++-- the session. The panel records them in $XDG_RUNTIME_DIR/omarchy-disabled-monitors.
++local runtime_dir = os.getenv("XDG_RUNTIME_DIR")
++local disabled_monitors = runtime_dir and io.open(runtime_dir .. "/omarchy-disabled-monitors", "r")
++if disabled_monitors then
++  for line in disabled_monitors:lines() do
++    local output = line:match("^%s*(.-)%s*$")
++    if output ~= "" then
++      hl.monitor({ output = output, disabled = true })
++    end
++  end
++  disabled_monitors:close()
++end

@@ -51,6 +51,10 @@ check "pkg-missing for skipped yay" omarchy-pkg-missing yay
 check "omarchy-version" omarchy-version
 check "omarchy CLI router" omarchy --help
 
+# Pending migrations that would do Arch things (relevant after an upstream.lock bump)
+audit=$("$OMAGEEKO_ROOT/layers/03-omarchy-core/tools/migration-audit.sh")
+if (( $? == 0 )); then ok "no Arch-coupled migrations pending ($(tail -1 <<<"$audit"))"; else bad "Arch-coupled migrations pending: $(grep '^ARCH' <<<"$audit" | tr '\n' ';')"; fi
+
 # Tumbleweed identity and lookups untouched
 check "os-release still Tumbleweed" grep -q '^ID="opensuse-tumbleweed"' /etc/os-release
 # TW ships nsswitch.conf in /usr/etc; omageeko must not create an Arch-style /etc copy

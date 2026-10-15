@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# omarchy:summary=Show a fuzzy-finder TUI for picking installed Flatpak apps to remove.
+# omarchy:requires-sudo=true
+# omageeko: from the omaweed branch; system-wide apps (omageeko installs Flathub apps --system)
+
+fzf_args=(
+  --multi
+  --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select'
+  --preview-label-pos='bottom'
+  --preview-window 'down:65%:wrap'
+  --bind 'alt-p:toggle-preview'
+  --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+  --bind 'alt-k:preview-up,alt-j:preview-down'
+  --delimiter '\t'
+  --with-nth '1,3'
+  --preview 'flatpak info {2}'
+  --color 'pointer:red,marker:red'
+)
+
+apps=$(flatpak list --app --columns=name,application,installation 2>/dev/null)
+if [[ -z $apps ]]; then
+  echo "No Flatpak apps installed."
+  exit 0
+fi
+
+selected=$(fzf "${fzf_args[@]}" <<<"$apps")
+
+if [[ -n $selected ]]; then
+  while IFS=$'\t' read -r _name app_id installation; do
+    if [[ $installation == "user" ]]; then
+      flatpak uninstall --user --noninteractive "$app_id"
+    else
+      sudo flatpak uninstall --system --noninteractive "$app_id"
+    fi
+  done <<<"$selected"
+  flatpak uninstall --system --unused --noninteractive >/dev/null 2>&1 || true
+  omarchy-show-done
+fi

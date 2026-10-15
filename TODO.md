@@ -30,6 +30,10 @@ Parked on 2026-10-15 after layer 06b. Ordered as the Omarchy menu reads, top-dow
 - [ ] sysctl / zram / oomd / logind / udev / modprobe drop-ins from upstream `etc/`, each reviewed for TW
 - [ ] `omarchy update` end-to-end test on a real Tumbleweed snapshot bump
 
+## omaweed follow-ups
+- [ ] Visually check: monitor panel disable survives a theme switch; Remove › Flatpak and Install › OPI entries
+- [ ] Delete the `omaweed` branch in nunix/omarchy-mac once happy (archived in `archive/omaweed/`)
+
 ## Later / optional
 - [ ] superwhisper-bin (proprietary dictation)
 - [ ] Battery charge thresholds (ThinkPad start/stop) — no Omarchy setting exists

@@ -1,0 +1,4 @@
+b359b11f57ebb7d5a9c7fc314d7a28e18bb88bed 2026-09-04T05:49:54Z Migrate Omaweed to Omarchy Quattro (v4)
+89920b650505969db4ec74177973aedc0566fb5c 2026-09-04T06:58:47Z omaweed: replace AUR/yay fake stub with OPI-backed shim, drop unsupported desktop AI apps
+ed9bc5136a632efd5637cdf0b7c93bcdd22e3ec7 2026-09-11T13:51:30Z feat: expand agent usage, monitor session persistence, and desktop defaults
+3d184de15e1dc9d103d359b6a459bb79481d8e6f 2026-09-11T14:08:25Z feat: add omatomic installer for openSUSE MicroOS/Aeon immutable systems
