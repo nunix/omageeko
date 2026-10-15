@@ -12,3 +12,8 @@
 - Hybrid implemented: 9 box apps, 4 native (voxtype vendor RPM, once, openclaw, omarchy-emacs), symfony-cli vendor repo. Audit: 75 resolved, 1 later (superwhisper-bin, proprietary), 0 broken.
 - Round trip tested through `omarchy-pkg-add/present/drop` with `omazed` (box install, export, run on host, removal, state cleanup).
 - Prototype artifact removed: a manual `distrobox-export --app claude` had matched the native Claude Code URL handler (shared $HOME) and exported a bogus copy.
+
+## Zed theming (2026-10-15)
+- omazed (box) generates `~/.config/zed/themes/omazed.json` from the current Omarchy theme (`~/.local/state/omarchy/current/theme/colors.toml`). `theme-set.d/omazed` runs `omazed set` on every theme switch; Zed reloads theme files live.
+- Bug found (upstream too): omazed points Zed at "Omazed" once, then writes a marker (`~/.local/share/omazed/initialized`). That happened before Zed's first launch, and Zed's onboarding rewrote settings to "One Dark", so the Omarchy theme was never active. Fixed for the user (marker cleared plus `omazed sync`). The installer patch re-selects Omazed if onboarding overwrites it within 2 minutes.
+- Manual recovery: `rm ~/.local/share/omazed/initialized && omazed sync`.

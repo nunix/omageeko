@@ -46,6 +46,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-remove-security-fingerprint | guard the /etc/pam.d/sudo grep (only exists after --all) |
 | omarchy-update-time | chronyd restart + `chronyc makestep` (TW uses chrony) |
 | omarchy-remove-preinstalls | delete `~/.local/bin/{claude,codex,gh,…}` only when they are Omarchy mise wrappers (upstream deleted them unconditionally, which removed a native Claude Code) |
+| omarchy-install-editor-zed | after launching Zed, re-select omazed's "Omazed" theme if Zed's first-run onboarding overwrites `settings.json` (omazed selects it only once, before Zed has run) |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 
 ## Added files (`overlay/share/`)

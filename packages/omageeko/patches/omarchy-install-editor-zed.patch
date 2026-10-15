@@ -1,0 +1,22 @@
+--- a/bin/omarchy-install-editor-zed	2026-10-15 10:12:42.631015269 +0200
++++ b/bin/omarchy-install-editor-zed	2026-10-15 10:12:42.644014611 +0200
+@@ -9,3 +9,19 @@
+ omazed setup
+ 
+ setsid uwsm-app -- gtk-launch dev.zed.Zed >/dev/null 2>&1 &
++
++# omageeko: omazed selects its "Omazed" theme only once (before Zed has ever run).
++# Zed's first-run onboarding then rewrites settings.json with its own theme. Re-select
++# Omazed once if that happens in the next two minutes; theme switches keep it in sync.
++setsid bash -c '
++  for _ in {1..120}; do
++    sleep 1
++    settings="$HOME/.config/zed/settings.json"
++    [[ -f $settings ]] || continue
++    if ! grep -q "\"theme\": *\"Omazed\"" "$settings"; then
++      rm -f "$HOME/.local/share/omazed/initialized"
++      omazed sync >/dev/null 2>&1
++      break
++    fi
++  done
++' >/dev/null 2>&1 &
