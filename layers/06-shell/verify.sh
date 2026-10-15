@@ -22,6 +22,7 @@ M=/usr/share/omarchy/default/omarchy/omarchy-menu.jsonc
 check "menu: AUR entry is Flathub" grep -q '"install.aur": {[^}]*"label":"Flathub"' "$M"
 check "menu: no Arch logo on package entries" bash -c '! grep -E "\"(install|remove)\.package\"" "'"$M"'" | grep -q "󰣇"'
 check "menu: only stable/dev channels" bash -c '! grep -qE "\"update\.channel\.(rc|edge)\"" "'"$M"'"'
+check "remove-preinstalls only deletes Omarchy mise wrappers (keeps native claude)" grep -q "only delete Omarchy's own mise wrappers" /usr/bin/omarchy-remove-preinstalls
 check "update-time uses chrony" grep -q chronyc /usr/bin/omarchy-update-time
 audit=$(python3 -I "$OMAGEEKO_ROOT/layers/06-shell/tools/pkgaudit.py" 2>&1); status=$?
 summary=$(head -1 <<<"$audit")
