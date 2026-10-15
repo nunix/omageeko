@@ -1,0 +1,28 @@
+# omageeko-builder: Tumbleweed toolchain for building omageeko RPMs.
+# Per-package BuildRequires are installed at build time from each spec, so this
+# image only carries the common toolchains. Rebuild with:
+#   podman build -t localhost/omageeko-builder:tw -f layers/00-bootstrap/Containerfile layers/00-bootstrap
+FROM registry.opensuse.org/opensuse/tumbleweed:latest
+
+LABEL org.opencontainers.image.title="omageeko-builder" \
+      org.opencontainers.image.description="Tumbleweed RPM build environment for omageeko"
+
+# Keep downloaded packages in the (volume-mounted) zypp cache between builds
+RUN zypper --non-interactive modifyrepo --all --keep-packages \
+ && zypper --non-interactive refresh \
+ && zypper --non-interactive install --no-recommends \
+      rpm-build rpmdevtools createrepo_c \
+      gcc gcc-c++ make cmake ninja meson pkgconf-pkg-config \
+      git-core curl tar gzip xz zstd unzip patch which \
+      go rust cargo \
+ && zypper clean --all
+
+# Same codec stack as the host (layer 00): build against Packman's ffmpeg/mpv
+RUN zypper --non-interactive addrepo --refresh --priority 90 \
+      https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/Essentials/ packman-essentials \
+ && zypper --non-interactive --gpg-auto-import-keys refresh \
+ && zypper --non-interactive modifyrepo --all --keep-packages \
+ && zypper --non-interactive dist-upgrade --from packman-essentials --allow-vendor-change --no-recommends \
+ && zypper clean --all
+
+WORKDIR /src

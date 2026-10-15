@@ -1,0 +1,52 @@
+#!/bin/bash
+# Build one omageeko RPM inside the builder container.
+# Usage (in container): lib/build-rpm.sh packages/<name>/<name>.spec
+# Expects the project at /src and the local repo at /repo (see in_builder).
+
+set -euo pipefail
+
+spec="$1"
+pkgdir=$(dirname "$spec")
+topdir=/tmp/rpmbuild
+
+echo ">>> Syncing builder with current Tumbleweed"
+zypper --non-interactive --quiet refresh
+zypper --non-interactive --quiet dist-upgrade --no-recommends
+
+rm -rf "$topdir"
+mkdir -p "$topdir"/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
+# Patches and extra files ship next to the spec
+find "$pkgdir" -maxdepth 1 -type f ! -name '*.spec' -exec cp -t "$topdir/SOURCES" {} +
+
+echo ">>> Installing BuildRequires"
+mapfile -t buildreqs < <(rpmspec -q --buildrequires "$spec" | sed -E 's/ +([<>=]+) +/\1/')
+if (( ${#buildreqs[@]} )); then
+  zypper --non-interactive --quiet install --no-recommends "${buildreqs[@]}"
+fi
+
+echo ">>> Fetching sources"
+# TW has no spectool: take remote Source URLs from the parsed spec.
+# A "#/name" fragment sets the local file name (standard Fedora/SUSE convention).
+rpmspec -P "$spec" | sed -nE 's/^Source[0-9]*:[[:space:]]*((https?|ftp):\/\/.*)$/\1/p' |
+  while read -r url; do
+    file=${url##*/}
+    [[ $url == *'#/'* ]] && file=${url##*#/} && url=${url%%#/*}
+    if [[ ! -f $topdir/SOURCES/$file ]]; then
+      echo "    $file"
+      curl -fsSL --retry 3 -o "$topdir/SOURCES/$file" "$url"
+    fi
+  done
+
+echo ">>> Building"
+rpmbuild --define "_topdir $topdir" -ba "$spec"
+
+echo ">>> Publishing to local repo"
+for rpm in "$topdir"/RPMS/*/*.rpm; do
+  arch=$(basename "$(dirname "$rpm")")
+  mkdir -p "/repo/$arch"
+  cp -f "$rpm" "/repo/$arch/"
+  echo "    $arch/$(basename "$rpm")"
+done
+mkdir -p /repo/src
+cp -f "$topdir"/SRPMS/*.src.rpm /repo/src/
+createrepo_c --quiet --update /repo

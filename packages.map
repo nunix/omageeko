@@ -1,0 +1,191 @@
+# omageeko package map: upstream install/omarchy-base.packages -> Tumbleweed
+# Format: <arch-name> <layer> <tw-packages,comma,separated | @build | @flatpak:<id> | @repo:<alias> | -> [# note]
+#   layer  = omageeko layer that installs it (01 base, 02 build, 04 session, 05 shell, 06 login-boot, 07 system, 08 apps)
+#   @build = RPM built in layer 02 from packages/<name>
+#   -      = intentionally skipped (reason in note)
+# Lines whose name starts with '+' are omageeko extras (not in upstream's list).
+# Every package in upstream's list must appear here; layers/01-base-packages/verify.sh checks that.
+
+# --- 01: CLI and TUI tools
+bash-completion        01 bash-completion
+bat                    01 bat
+btop                   01 btop
+eza                    01 eza
+fd                     01 fd
+fzf                    01 fzf
+ripgrep                01 ripgrep
+zoxide                 01 zoxide
+starship               01 starship
+fastfetch              01 fastfetch
+lazygit                01 lazygit
+gum                    01 gum
+jq                     01 jq
+less                   01 less
+man-db                 01 man
+plocate                01 plocate
+tldr                   01 tealdeer
+tmux                   01 tmux
+tree-sitter-cli        01 tree-sitter
+nvim                   01 neovim
+vi                     01 vim
+whois                  01 whois
+unzip                  01 unzip
+inxi                   01 inxi
+socat                  01 socat
+inotify-tools          01 inotify-tools
+git                    01 git
+fakeroot               01 fakeroot
+dosfstools             01 dosfstools
+exfatprogs             01 exfatprogs
+mise-bin               01 @repo:mise                       # https://mise.jdx.dev/rpm (upstream RPM repo)
+usage                  -  -                                # not in the mise RPM repo; per-user: `mise use -g usage`
+inetutils              01 hostname                         # only hostname is used; telnet/ftp not needed
+lua51                  01 luajit                           # neovim uses LuaJIT (5.1 ABI)
+luarocks               01 luajit-luarocks
+
+# --- 01: dev libraries Omarchy ships for Ruby/Rails work
+ruby                   01 ruby
+libyaml                01 libyaml-0-2
+mariadb-libs           01 libmariadb3
+postgresql-libs        01 libpq5
+libvips                01 libvips42,vips-tools
+python-gobject         01 python313-gobject
+python-poetry-core     01 python313-poetry-core
+
+# --- 01: Wayland and desktop helper tools
+wl-clipboard           01 wl-clipboard
+wtype                  01 wtype
+grim                   01 grim
+slurp                  01 slurp
+hyprpicker             01 hyprpicker
+hyprsunset             01 hyprsunset
+hyprland-guiutils      01 hyprland-guiutils
+imagemagick            01 ImageMagick
+qrencode               01 qrencode
+zbar                   01 zbar
+tesseract              01 tesseract-ocr
+tesseract-data-eng     01 tesseract-ocr-traineddata-eng
+ffmpeg                 01 ffmpeg                           # Packman build (layer 00)
+ffmpegthumbnailer      01 ffmpegthumbnailer
+yt-dlp                 01 yt-dlp
+gpu-screen-recorder    01 gpu-screen-recorder
+brightnessctl          01 brightnessctl
+ddcutil                01 ddcutil
+pamixer                01 pamixer
+alsa-utils             01 alsa-utils
+wireplumber            01 wireplumber
+udiskie                01 udiskie
+gnome-keyring          01 gnome-keyring
+libsecret              01 secret-tool
+gvfs-mtp               01 gvfs-backends
+gvfs-nfs               01 gvfs-backends
+gvfs-smb               01 gvfs-backends
+foot                   01 foot                             # quattro default terminal
+xdg-terminal-exec      01 xdg-terminal-exec
+xdg-desktop-portal-gtk 01 xdg-desktop-portal-gtk
+xdg-desktop-portal-hyprland 01 xdg-desktop-portal-hyprland
+fontconfig             01 fontconfig
+
+# --- 01: fonts and themes
+noto-fonts             01 google-noto-sans-fonts,google-noto-serif-fonts
+noto-fonts-cjk         01 google-noto-sans-cjk-fonts
+noto-fonts-emoji       01 google-noto-coloremoji-fonts
+woff2-font-awesome     01 fontawesome-fonts
+yaru-icon-theme        01 yaru-icon-theme
+gnome-themes-extra     01 gnome-themes-extras
++symbols-nerd-font     01 nerdfonts-symbolsonly-fonts      # extra: Nerd glyph fallback for any font
+ttf-jetbrains-mono-nerd-basic 02 @build                    # configs use family "JetBrainsMono Nerd Font"; TW only ships plain JetBrains Mono
+ttf-ia-writer          02 @build
+
+# --- 02: built from source, desktop-critical (08 = Omarchy apps built with the same pipeline)
+quickshell             02 @build                           # 0.3.2 + Omarchy's load_qtquick_611.patch
+owe                    02 @build                           # video wallpaper engine (4.5 feature)
+owe-lockfeed           02 @build
+omarchy-hyprland-titlebars 02 @build                       # Hyprland plugin, needs hyprland-devel == 0.56.2
+hyprland-preview-share-picker 02 @build
+omasnap                08 @build                           # screenshot editor
+aether                 08 @build                           # theming tool (Go)
+gliff                  08 @build                           # Rust
+herdr                  08 @build                           # Rust
+ttfx                   08 @build                           # Rust
+omacalc                08 @build
+omacut                 08 @build
+omawrite               08 @build
+signed                 08 @build
+hype                   08 @build
+monologue              08 @build
+cliamp                 08 @build
+disktree-bin           08 @build
+tobi-try               08 @build
+tzupdate               08 @build
+
+# --- 04: session
+uwsm                   04 uwsm
+hyprland               04 hyprland                         # already installed via the hyprland role
+
+# --- 05: shell runtime (also pulled in by the quickshell RPM)
+qt6-base               05 libQt6Gui6,libQt6Widgets6
+qt6-declarative        05 qt6-declarative-imports
+qt6-svg                05 libQt6Svg6
+qt6-multimedia         05 qt6-multimedia-imports
+qt6-wayland            05 qt6-wayland
+qt6-imageformats       05 qt6-imageformats
+
+# --- 06: login and boot
+plymouth               06 plymouth                         # already installed; Omarchy theme in layer 06
+sddm                   -  -                                # decision: keep lightdm
+
+# --- 07: system services
+power-profiles-daemon  07 power-profiles-daemon
+bluez                  07 bluez
+bluez-tools            -  -                                # TW's bluez ships the CLI tools
+bluez-utils            -  -                                # TW's bluez ships the CLI tools
+bolt                   07 bolt
+cups                   07 cups
+cups-filters           07 cups-filters
+cups-pk-helper         07 cups-pk-helper
+system-config-printer  07 system-config-printer
+avahi                  07 avahi
+nss-mdns               07 nss-mdns
+networkmanager         07 NetworkManager                   # already installed
+wireless-regdb         07 wireless-regdb
+fcitx5                 07 fcitx5
+fcitx5-chewing         07 fcitx5-chewing
+fcitx5-chinese-addons  07 fcitx5-chinese-addons
+fcitx5-hangul          07 fcitx5-hangul
+fcitx5-mozc            07 fcitx5-mozc
+fcitx5-gtk             07 fcitx5-gtk3,fcitx5-gtk4
+fcitx5-qt              07 fcitx5-qt6
+docker                 07 podman-docker                    # decision: podman; docker CLI compatibility shim
+docker-compose         07 docker-compose                   # `podman compose` delegates to it via podman.socket
+docker-buildx          -  -                                # podman build covers it
+ufw                    07 firewalld                        # TW default firewall
+ufw-docker             -  -                                # firewalld + podman don't need it
+qemu-user-static-binfmt 07 qemu-linux-user                 # cross-arch containers
+
+# --- 08: applications
+chromium               08 chromium
+nautilus               08 nautilus
+nautilus-python        08 python313-nautilus
+sushi                  08 sushi
+gnome-disk-utility     08 gnome-disk-utility
+evince                 08 evince
+mpv                    08 mpv
+mpv-mpris              08 mpv-mpris
+imv                    08 imv
+pinta                  08 pinta
+libreoffice-fresh      08 libreoffice
+moonlight-qt           08 moonlight
+localsend              08 @flatpak:org.localsend.localsend_app
+obsidian               08 @flatpak:md.obsidian.Obsidian
+omarchy-nvim           08 @build                           # LazyVim preset; may become a user-config step
+
+# --- skipped: Arch-only or replaced
+base-devel             -  -                                # toolchains live in the builder container
+expac                  -  -                                # pacman tool
+pacman-contrib         -  -                                # pacman tool
+yay                    -  -                                # AUR helper; zypper + local repo instead
+kernel-modules-hook    -  -                                # Arch kernel-upgrade workaround; TW keeps old modules (multiversion)
+asdcontrol             -  -                                # Apple Studio Display brightness; not relevant on this hardware
+dotnet-runtime         -  -                                # Arch pinta dependency; TW pinta brings its own
+superwhisper-bin       -  -                                # proprietary dictation; revisit as optional
