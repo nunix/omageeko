@@ -1,0 +1,47 @@
+--- a/bin/omarchy-setup-security-fingerprint	2026-10-15 08:08:37.417656148 +0200
++++ b/bin/omarchy-setup-security-fingerprint	2026-10-15 08:08:53.006915615 +0200
+@@ -18,6 +18,15 @@
+   # $OMARCHY_PATH trees but leaves /usr/bin untouched.
+   local fprintd_gate="auth      [success=1 default=ignore] pam_exec.so quiet /usr/bin/omarchy-hw-laptop-closed"
+ 
++  # omageeko: Tumbleweed ships vendor PAM stacks in /usr/lib/pam.d; an /etc/pam.d
++  # copy overrides them, so start from the vendor file before editing.
++  local stack
++  for stack in sudo polkit-1; do
++    if [[ ! -e /etc/pam.d/$stack && -f /usr/lib/pam.d/$stack ]]; then
++      sudo install -m644 "/usr/lib/pam.d/$stack" "/etc/pam.d/$stack"
++    fi
++  done
++
+   # Configure sudo
+   if ! grep -q pam_fprintd.so /etc/pam.d/sudo; then
+     echo "Configuring sudo for fingerprint authentication..."
+@@ -47,11 +56,11 @@
+     sudo tee /etc/pam.d/polkit-1 >/dev/null <<EOF
+ $fprintd_gate
+ auth      sufficient pam_fprintd.so
+-auth      include system-auth
++auth      include common-auth
+ 
+-account   include system-auth
+-password  include system-auth
+-session   include system-auth
++account   include common-account
++password  include common-password
++session   include common-session
+ EOF
+   fi
+ }
+@@ -68,9 +77,10 @@
+ # needs a pin bump in omarchy-pkgs. It conflicts with stock libfprint, and
+ # --noconfirm answers that prompt with N; --ask 4 accepts the replacement in
+ # one transaction, so a failed install leaves the existing driver in place.
+-if omarchy-pkg-missing libfprint-git fprintd usbutils; then
++# omageeko: Tumbleweed's libfprint (libfprint-2-2) via the package map, plus fprintd-pam
++if omarchy-pkg-missing libfprint-git fprintd fprintd-pam usbutils; then
+   echo "Installing required packages..."
+-  sudo pacman -S --needed --noconfirm --ask 4 -- libfprint-git fprintd usbutils
++  omarchy-pkg-add libfprint-git fprintd fprintd-pam usbutils
+ fi
+ 
+ # Enroll first fingerprint

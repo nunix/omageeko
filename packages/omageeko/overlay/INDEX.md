@@ -40,6 +40,8 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-update-restart | kernel ownership via `rpm -qf` |
 | omarchy-debug | package info from rpm |
 | omarchy-upload-log | package list from rpm |
+| omarchy-apply-lock | lock PAM `account include common-account` (TW has no system-local-login) |
+| omarchy-setup-security-fingerprint | copy /usr/lib/pam.d/{sudo,polkit-1} to /etc before editing; polkit stack includes common-*; packages via omarchy-pkg-add (+fprintd-pam) |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 
 ## Added files (`overlay/share/`)
@@ -47,6 +49,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | File | Why |
 |---|---|
 | `/usr/share/applications/chromium.desktop` (hidden) | Omarchy uses the `chromium.desktop` ID (default browser, web apps, mimeapps.list); TW ships `chromium-browser.desktop` |
+| `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf` (omageeko-hardware) | readable names for UCM laptop audio nodes (panel labels by node.nick) |
 | `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports |
 
 ## Path changes
@@ -59,7 +62,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 
 Not applicable: refresh-limine, refresh-pacman, upgrade-to-quattro, provision-owner, provision-hardware, dev-pkg-test, reinstall-pkgs.
 
-Ported in later layers: system-factory-reset (06), plymouth-set (06), hibernation-* (07), setup/remove-security-sshd (07), setup-security-fingerprint (09), install-gaming-steam/retroarch (08), install/remove-service-sunshine (08), install-openclaw-cli (08).
+Ported in later layers: system-factory-reset (06), plymouth-set (06), hibernation-* (07), setup/remove-security-sshd (07), install-gaming-steam/retroarch (08), install/remove-service-sunshine (08), install-openclaw-cli (08).
 
 ## Upstream files not shipped
 

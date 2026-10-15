@@ -2,7 +2,8 @@
 # Format: <arch-name> <layer> <tw-packages,comma,separated | @build | @flatpak:<id> | @repo:<alias> | -> [# note]
 #   layer  = omageeko layer that installs it (01 base, 02 build, 04 session, 05 shell, 06 login-boot, 07 system, 08 apps)
 #   @build = RPM built from packages/<name> (@build:<rpm> when the RPM name differs from the Arch name)
-#   -      = intentionally skipped (reason in note)
+#   -      = intentionally skipped (reason in note); a "-" layer with a real target is
+#            not installed by any layer but still translated for omarchy-pkg-add
 # Lines whose name starts with '+' are omageeko extras (not in upstream's list).
 # Every package in upstream's list must appear here; layers/01-base-packages/verify.sh checks that.
 
@@ -136,8 +137,8 @@ plymouth               06 plymouth                         # already installed; 
 sddm                   -  -                                # decision: keep lightdm
 
 # --- 07: system services
-power-profiles-daemon  07 power-profiles-daemon
-bluez                  07 bluez
+power-profiles-daemon  05 power-profiles-daemon
+bluez                  05 bluez
 bluez-tools            -  -                                # TW's bluez ships the CLI tools
 bluez-utils            -  -                                # TW's bluez ships the CLI tools
 bolt                   07 bolt
@@ -149,19 +150,28 @@ avahi                  07 avahi
 nss-mdns               07 nss-mdns
 networkmanager         07 NetworkManager                   # already installed
 wireless-regdb         07 wireless-regdb
-fcitx5                 07 fcitx5
-fcitx5-chewing         07 fcitx5-chewing
-fcitx5-chinese-addons  07 fcitx5-chinese-addons
-fcitx5-hangul          07 fcitx5-hangul
-fcitx5-mozc            07 fcitx5-mozc
-fcitx5-gtk             07 fcitx5-gtk3,fcitx5-gtk4
-fcitx5-qt              07 fcitx5-qt6
+fcitx5                 04 fcitx5
+fcitx5-chewing         04 fcitx5-chewing
+fcitx5-chinese-addons  04 fcitx5-chinese-addons
+fcitx5-hangul          04 fcitx5-hangul
+fcitx5-mozc            04 fcitx5-mozc
+fcitx5-gtk             04 fcitx5-gtk3,fcitx5-gtk4
+fcitx5-qt              04 fcitx5-qt6
 docker                 07 podman-docker                    # decision: podman; docker CLI compatibility shim
 docker-compose         07 docker-compose                   # `podman compose` delegates to it via podman.socket
 docker-buildx          -  -                                # podman build covers it
 ufw                    07 firewalld                        # TW default firewall
 ufw-docker             -  -                                # firewalld + podman don't need it
 qemu-user-static-binfmt 07 qemu-linux-user                 # cross-arch containers
+
+# --- 05: hardware (names Omarchy's install/hardware scripts and setup commands pass to omarchy-pkg-add)
+libfprint-git          05 libfprint-2-2                    # Arch tracks libfprint git; TW's release supports this Goodix 27c6:6594
+fprintd                05 fprintd
+fprintd-pam            05 fprintd-pam                      # TW splits the PAM module out
+usbutils               05 usbutils
+vulkan-radeon          05 libvulkan_radeon
+vulkan-intel           -  libvulkan_intel                  # not this hardware; mapped for completeness
+lsp-plugins-lv2        -  lsp-plugins                      # speaker tunings (no tuning for this laptop)
 
 # --- 08: applications
 chromium               04 chromium                         # default browser + web apps; omarchy-provision-user sets it

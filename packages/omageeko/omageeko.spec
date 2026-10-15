@@ -71,6 +71,15 @@ The "Omarchy (Hyprland uwsm)" Wayland session for display managers, the uwsm
 environment file that sets OMARCHY_PATH/PATH/TERMINAL/EDITOR for the session,
 and the systemd drop-in that keeps the shell alive across compositor exits.
 
+%package        hardware
+Summary:        omageeko hardware integration for Tumbleweed laptops
+Requires:       wireplumber
+
+%description    hardware
+Hardware defaults omageeko adds on top of Omarchy: readable names for laptop
+codec devices exposed through ALSA UCM (headphone jack, headset mic, speakers,
+internal microphone) so Omarchy's audio panel can tell them apart.
+
 %prep
 %setup -q -n omarchy-%{commit}
 for p in %{_sourcedir}/patches/*.patch; do
@@ -207,6 +216,10 @@ install -Dm644 default/uwsm/env.d/10-omarchy %{buildroot}%{_datadir}/uwsm/env.d/
 install -Dm644 etc/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf \
   %{buildroot}%{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
 
+# ---- omageeko-hardware (layer 05)
+install -Dm644 %{_sourcedir}/overlay/share/wireplumber/60-omageeko-ucm-labels.conf \
+  %{buildroot}%{_datadir}/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
+
 %check
 # Every sudoers rule must parse
 for f in %{buildroot}%{_sysconfdir}/sudoers.d/*; do
@@ -281,3 +294,6 @@ done
 %{_datadir}/uwsm/env.d/10-omarchy
 %dir %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d
 %config %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
+
+%files hardware
+%{_datadir}/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf

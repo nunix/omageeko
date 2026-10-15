@@ -1,0 +1,28 @@
+--- a/bin/omarchy-apply-lock	2026-10-15 08:08:37.415760745 +0200
++++ b/bin/omarchy-apply-lock	2026-10-15 08:08:37.427756400 +0200
+@@ -26,6 +26,7 @@
+   fi
+ }
+ 
++# omageeko: Tumbleweed has no system-local-login; its account stack is common-account
+ echo "Configuring lock screen password authentication..."
+ 
+ as_root tee /etc/pam.d/omarchy-lock-password >/dev/null <<'EOF'
+@@ -37,7 +38,7 @@
+ auth       optional                    pam_permit.so
+ auth       required                    pam_env.so
+ auth       required                    pam_faillock.so authsucc
+-account    include                     system-local-login
++account    include                     common-account
+ EOF
+ 
+ # Install resume recovery alongside fingerprint PAM, so setup and upgrades
+@@ -62,7 +63,7 @@
+   as_root tee /etc/pam.d/omarchy-lock-fingerprint >/dev/null <<'EOF'
+ #%PAM-1.0
+ auth       required                    pam_fprintd.so
+-account    include                     system-local-login
++account    include                     common-account
+ EOF
+ elif [[ $fingerprint_status == "no" ]] || grep -qi 'has no fingers enrolled' <<< "$fingerprint_status"; then
+   as_root rm -f /etc/pam.d/omarchy-lock-fingerprint "$resume_hook_dst"

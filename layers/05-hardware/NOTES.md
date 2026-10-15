@@ -1,0 +1,24 @@
+# Layer 05 — notes
+
+Status: **installed and verified 2026-10-15** (snapper pair 75..80). Waiting on manual tests (fingerprint enrollment, lock, Bluetooth pairing, headset).
+
+## Hardware audit (P14s Gen 4 AMD)
+| Device | Result |
+|---|---|
+| Headphone jack / headset mic | worked, but panel showed "ALC257 Analog". Fixed with the UCM label rule |
+| Laptop microphone (ACP6.3 DMIC via UCM Mic1) | works; noise floor -46/-49 dBFS; large DC offset (+0.08/+0.35) |
+| HDMI/DP outputs (dock, 2 monitors) | labelled by monitor name, fine |
+| Bluetooth | bluez was missing entirely. Installed, controller up |
+| Power profiles | ppd was missing. performance/balanced/power-saver available (amd-pstate active) |
+| Fingerprint (Goodix 27c6:6594) | supported by TW libfprint 1.94.10; fprintd sees it; enrollment pending |
+| Lock screen | was refusing to lock (no PAM stack). Fixed, pam_unix path verified |
+| Input method (fcitx5) | omarchy-fcitx5.service was crash-looping (fcitx5 missing). Fixed in layer 04 |
+| Keyboard backlight, mute/micmute LEDs, brightness, cameras, Wi-Fi, s2idle | present |
+
+## Upstream hardware scripts on this machine
+All ran; only bluetooth.sh, vulkan.sh (already satisfied), network.sh (masks systemd-networkd-wait-online; TW uses NetworkManager) and fix-fkeys.sh (writes `hid_apple.conf`, inert without Apple keyboards) changed anything. platform-setup.sh is a no-op on x86.
+
+## Open / optional
+- DMIC DC offset: cosmetic for voice apps (they high-pass). A PipeWire filter-chain DC blocker could clean it if it causes pops.
+- Battery charge thresholds (thinkpad_acpi supports start/end): Omarchy has no setting for it. Candidate omageeko addition.
+- Bluetooth agent (`bt-agent.service`) only runs in the uwsm session (graphical-session.target).

@@ -29,66 +29,85 @@ snap_end
 export OMARCHY_PATH=/usr/share/omarchy
 mkdir -p "$STATE_DIR/backups"
 
-# Identity for git.sh / xcompose.sh: env, then git, then GitHub, then GECOS
-OMARCHY_USER_NAME=${OMAGEEKO_USER_NAME:-$(git config --global user.name || true)}
-OMARCHY_USER_EMAIL=${OMAGEEKO_USER_EMAIL:-$(git config --global user.email || true)}
-if [[ -z $OMARCHY_USER_NAME || -z $OMARCHY_USER_EMAIL ]] && gh auth status &>/dev/null; then
-  : "${OMARCHY_USER_NAME:=$(gh api user --jq '.name // empty')}"
-  : "${OMARCHY_USER_EMAIL:=$(gh api user --jq '.email // empty')}"
-fi
-: "${OMARCHY_USER_NAME:=$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1)}"
-export OMARCHY_USER_NAME OMARCHY_USER_EMAIL
-log "User identity: ${OMARCHY_USER_NAME:-?} <${OMARCHY_USER_EMAIL:-?}>"
-
-claude_sum=$(sha256sum ~/.claude/settings.json 2>/dev/null | cut -d' ' -f1)
-
-# Lines to carry over from the current ~/.bashrc (skip an earlier carry-over block's markers)
-carry=""
-if [[ -f ~/.bashrc ]]; then
-  carry=$(grep -v '^#' "$LAYER_DIR/carryover.patterns" | grep -v '^$' | grep -Ef - ~/.bashrc | grep -vxF -e "$CARRY_BEGIN" -e "$CARRY_END" || true)
-fi
-
-# Keep a running Hyprland from live-reloading the config files we replace
-if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl &>/dev/null; then
-  hyprctl eval 'hl.config({ misc = { disable_autoreload = true } })' &>/dev/null || true
-fi
-
-# Backup once, before the very first reset (/home is not covered by snapper)
-if ! compgen -G "$STATE_DIR/backups/pre-04-*.tar.gz" >/dev/null; then
-  backup="$STATE_DIR/backups/pre-04-$(date +%Y%m%d-%H%M%S).tar.gz"
-  paths=()
-  while IFS= read -r rel; do
-    [[ -e $HOME/$rel ]] && paths+=("$rel")
-  done < <(cd /etc/skel && find . -mindepth 1 -maxdepth 2 \( -path ./.config -o -path ./.local -o -path ./.local/state -o -path ./.local/share \) -prune -o -print; \
-           cd /etc/skel && find .config .local/share .local/state -mindepth 1 -maxdepth 1)
-  if (( ${#paths[@]} )); then
-    tar -C "$HOME" -czf "$backup" "${paths[@]}"
-    log "Backed up ${#paths[@]} existing dotfile paths to $backup"
+# The user reset runs once; later runs keep the user's changes. Force with OMAGEEKO_RESET_USER=1.
+if [[ ! -f $STATE_DIR/user-provisioned || ${OMAGEEKO_RESET_USER:-0} == 1 ]]; then
+  # Identity for git.sh / xcompose.sh: env, then git, then GitHub, then GECOS
+  OMARCHY_USER_NAME=${OMAGEEKO_USER_NAME:-$(git config --global user.name || true)}
+  OMARCHY_USER_EMAIL=${OMAGEEKO_USER_EMAIL:-$(git config --global user.email || true)}
+  if [[ -z $OMARCHY_USER_NAME || -z $OMARCHY_USER_EMAIL ]] && gh auth status &>/dev/null; then
+    : "${OMARCHY_USER_NAME:=$(gh api user --jq '.name // empty')}"
+    : "${OMARCHY_USER_EMAIL:=$(gh api user --jq '.email // empty')}"
   fi
+  : "${OMARCHY_USER_NAME:=$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1)}"
+  export OMARCHY_USER_NAME OMARCHY_USER_EMAIL
+  log "User identity: ${OMARCHY_USER_NAME:-?} <${OMARCHY_USER_EMAIL:-?}>"
+
+  claude_sum=$(sha256sum ~/.claude/settings.json 2>/dev/null | cut -d' ' -f1)
+
+  # Lines to carry over from the current ~/.bashrc (skip an earlier carry-over block's markers)
+  carry=""
+  if [[ -f ~/.bashrc ]]; then
+    carry=$(grep -v '^#' "$LAYER_DIR/carryover.patterns" | grep -v '^$' | grep -Ef - ~/.bashrc | grep -vxF -e "$CARRY_BEGIN" -e "$CARRY_END" || true)
+  fi
+
+  # Keep a running Hyprland from live-reloading the config files we replace
+  if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl &>/dev/null; then
+    hyprctl eval 'hl.config({ misc = { disable_autoreload = true } })' &>/dev/null || true
+  fi
+
+  # Backup once, before the very first reset (/home is not covered by snapper)
+  if ! compgen -G "$STATE_DIR/backups/pre-04-*.tar.gz" >/dev/null; then
+    backup="$STATE_DIR/backups/pre-04-$(date +%Y%m%d-%H%M%S).tar.gz"
+    paths=()
+    while IFS= read -r rel; do
+      [[ -e $HOME/$rel ]] && paths+=("$rel")
+    done < <(cd /etc/skel && find . -mindepth 1 -maxdepth 2 \( -path ./.config -o -path ./.local -o -path ./.local/state -o -path ./.local/share \) -prune -o -print; \
+             cd /etc/skel && find .config .local/share .local/state -mindepth 1 -maxdepth 1)
+    if (( ${#paths[@]} )); then
+      tar -C "$HOME" -czf "$backup" "${paths[@]}"
+      log "Backed up ${#paths[@]} existing dotfile paths to $backup"
+    fi
+  fi
+
+  # Reset to Omarchy defaults (what omarchy-reinstall-configs does, without the boot refreshes)
+  log "Copying Omarchy defaults from /etc/skel"
+  cp -af /etc/skel/. "$HOME/"
+
+  if [[ -n $carry ]]; then
+    printf '\n%s\n%s\n%s\n' "$CARRY_BEGIN" "$carry" "$CARRY_END" >> ~/.bashrc
+    log "Carried over $(wc -l <<<"$carry") line(s) into ~/.bashrc"
+  fi
+
+  # A fresh account has nothing to migrate: mark every shipped migration done
+  mkdir -p ~/.local/state/omarchy/migrations
+  for migration in "$OMARCHY_PATH"/migrations/*.sh; do
+    touch ~/.local/state/omarchy/migrations/"$(basename "$migration")"
+  done
+
+  # Omarchy's per-user finalize (runtime context; headless theme so nothing live reloads)
+  log "Running omarchy-provision-user"
+  OMARCHY_THEME_HEADLESS=1 PATH="$OMARCHY_PATH/bin:$PATH" omarchy-provision-user --force 2>&1 | tee "$STATE_DIR/provision-user.log"
+  (( PIPESTATUS[0] == 0 )) || die "omarchy-provision-user failed (log: $STATE_DIR/provision-user.log)"
+
+  if [[ $(sha256sum ~/.claude/settings.json 2>/dev/null | cut -d' ' -f1) != "$claude_sum" ]]; then
+    die "~/.claude/settings.json changed during provisioning; check it"
+  fi
+else
+  log "User already provisioned; keeping current dotfiles (OMAGEEKO_RESET_USER=1 to reset)"
 fi
 
-# Reset to Omarchy defaults (what omarchy-reinstall-configs does, without the boot refreshes)
-log "Copying Omarchy defaults from /etc/skel"
-cp -af /etc/skel/. "$HOME/"
-
-if [[ -n $carry ]]; then
-  printf '\n%s\n%s\n%s\n' "$CARRY_BEGIN" "$carry" "$CARRY_END" >> ~/.bashrc
-  log "Carried over $(wc -l <<<"$carry") line(s) into ~/.bashrc"
+# Make "Omarchy (Hyprland uwsm)" the default lightdm session for this user.
+# lightdm reads AccountsService first and falls back to ~/.dmrc.
+if busctl --system call org.freedesktop.Accounts "/org/freedesktop/Accounts/User$(id -u)" \
+     org.freedesktop.Accounts.User SetXSession s omarchy &>/dev/null; then
+  log "Default lightdm session: omarchy (AccountsService)"
+else
+  warn "Could not set the AccountsService session; relying on ~/.dmrc"
 fi
-
-# A fresh account has nothing to migrate: mark every shipped migration done
-mkdir -p ~/.local/state/omarchy/migrations
-for migration in "$OMARCHY_PATH"/migrations/*.sh; do
-  touch ~/.local/state/omarchy/migrations/"$(basename "$migration")"
-done
-
-# Omarchy's per-user finalize (runtime context; headless theme so nothing live reloads)
-log "Running omarchy-provision-user"
-OMARCHY_THEME_HEADLESS=1 PATH="$OMARCHY_PATH/bin:$PATH" omarchy-provision-user --force 2>&1 | tee "$STATE_DIR/provision-user.log"
-(( PIPESTATUS[0] == 0 )) || die "omarchy-provision-user failed (log: $STATE_DIR/provision-user.log)"
-
-if [[ $(sha256sum ~/.claude/settings.json 2>/dev/null | cut -d' ' -f1) != "$claude_sum" ]]; then
-  die "~/.claude/settings.json changed during provisioning; check it"
+if [[ -f ~/.dmrc ]] && grep -q '^Session=' ~/.dmrc; then
+  sed -i 's/^Session=.*/Session=omarchy/' ~/.dmrc
+else
+  printf '[Desktop]\nSession=omarchy\n' >> ~/.dmrc
 fi
 
 touch "$STATE_DIR/user-provisioned"

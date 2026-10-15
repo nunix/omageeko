@@ -15,6 +15,9 @@ check "session visible to lightdm (/usr/share/wayland-sessions/omarchy.desktop)"
 check "uwsm env.d/10-omarchy" test -f /usr/share/uwsm/env.d/10-omarchy
 check "Hyprland session uwsm targets (hyprland.desktop)" test -f /usr/share/wayland-sessions/hyprland.desktop
 
+check "default lightdm session is omarchy" bash -c 'grep -q "^Session=omarchy" ~/.dmrc'
+check "fcitx5 installed (omarchy-fcitx5.service needs it)" command -v fcitx5
+
 # User config
 check "hyprland.lua uses the Omarchy bootstrap" grep -q 'default/hypr/bootstrap.lua' ~/.config/hypr/hyprland.lua
 # Hyprland 0.56.2 segfaults on hl.timer in --verify-config (no event loop), so

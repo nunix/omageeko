@@ -15,7 +15,6 @@ omarchy-hibernation-available	layer 07	needs a Tumbleweed swap/resume setup (dra
 omarchy-plymouth-set	layer 06	needs the Tumbleweed plymouth/dracut flow
 omarchy-setup-security-sshd	layer 07	needs firewalld instead of ufw
 omarchy-remove-security-sshd	layer 07	needs firewalld instead of ufw
-omarchy-setup-security-fingerprint	layer 09	needs Tumbleweed fprintd/PAM setup
 omarchy-install-gaming-steam	layer 08	needs Tumbleweed Steam packages
 omarchy-install-gaming-retroarch	layer 08	needs Tumbleweed RetroArch packages
 omarchy-install-service-sunshine	layer 08	needs Tumbleweed Sunshine packages and firewalld

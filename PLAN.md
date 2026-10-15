@@ -83,12 +83,12 @@ Each layer is done only when its `verify.sh` passes and it has been checked in a
 | 01 ✅ | base-cli | SUSE-name map of `omarchy-base.packages` (CLI, fonts, terminals, TUIs); mise | low |
 | 02 ✅ | build-deps | RPMs: **quickshell**, owe/owe-lockfeed, omarchy-hyprland-titlebars, hyprland-preview-share-picker, ia-writer font. Later: omasnap, gliff, herdr, ttfx, aether, omacalc/omacut/omawrite/signed/hype | medium |
 | 03 ✅ | omarchy-core | install upstream tree to `/usr/share/omarchy`, `bin` → `/usr/bin`, `etc/` drop-ins vetted for TW, `/etc/skel` content; TW overlay for pkg/update/boot/firewall commands | medium |
-| 04 ✅ (login test pending) | session | uwsm + `omarchy.desktop` session, user provisioning (`omarchy-provision-user`), Hyprland Lua bootstrap; test from a TTY before touching the DM | medium |
-| 05 | shell | omarchy-shell (quickshell) running: bar, notifications, OSD, launcher, polkit, **lock (PAM + SELinux)**, clipboard; theme switching | medium |
-| 06 | login-boot | lightdm defaults to the omarchy session (optional greeter theming), plymouth Omarchy theme via dracut, snapshot cmds via snapper/sdbootutil, faillock/sudoers tweaks | **high** (boot/login) |
-| 07 | system | power-profiles-daemon, firewalld, bluetooth, podman docker-compat, fcitx5/XCompose, wireplumber tuning, `omarchy-update` → `zypper dup` + snapper | medium |
-| 08 | apps | chromium + webapps, nautilus, mpv, imv, LibreOffice, Flatpak apps, nvim (LazyVim) | low |
-| 09 | hardware | P14s Gen 4: amd-pstate/ppd, fingerprint (fprintd + PAM), 780M VA-API/Vulkan, ThinkPad keys, battery thresholds | low |
+| 04 ✅ | session | uwsm + `omarchy.desktop` session, user provisioning (`omarchy-provision-user`), Hyprland Lua bootstrap; test from a TTY before touching the DM | medium |
+| 05 ✅ (manual tests pending) | hardware | bluez + ppd, Omarchy's install/hardware scripts, lock PAM, fingerprint port, UCM audio labels (pulled forward on 2026-10-15: hardware first) | low |
+| 06 | shell | omarchy-shell (quickshell) running: bar, notifications, OSD, launcher, polkit, **lock (PAM + SELinux)**, clipboard; theme switching | medium |
+| 07 | login-boot | lightdm defaults to the omarchy session (optional greeter theming), plymouth Omarchy theme via dracut, snapshot cmds via snapper/sdbootutil, faillock/sudoers tweaks | **high** (boot/login) |
+| 08 | system | power-profiles-daemon, firewalld, bluetooth, podman docker-compat, fcitx5/XCompose, wireplumber tuning, `omarchy-update` → `zypper dup` + snapper | medium |
+| 09 | apps | chromium + webapps, nautilus, mpv, imv, LibreOffice, Flatpak apps, nvim (LazyVim) | low |
 | 10 | cleanup | drop IceWM/x11 patterns, waybar/mako/swaync/wofi/rofi if unwanted | low |
 | 99 | consolidate | single `omageeko-install`, RPM packaging, upstream bump procedure, optional kiwi image | — |
 

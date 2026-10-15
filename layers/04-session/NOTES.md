@@ -1,6 +1,6 @@
 # Layer 04 — notes
 
-Status: **installed and verified 2026-10-15** (snapper pairs from #47 on). **Waiting on the manual login test.**
+Status: **verified in a real session 2026-10-15.** The first login landed in plain "Hyprland" because lightdm remembered the old session; the layer now sets `omarchy` as the default (AccountsService `SetXSession` + `~/.dmrc`).
 
 ## Results
 - Backup of the pre-Omarchy dotfiles: `~/.local/state/omageeko/backups/pre-04-20261015-074010.tar.gz` (4 paths).
@@ -16,3 +16,7 @@ Status: **installed and verified 2026-10-15** (snapper pairs from #47 on). **Wai
 
 ## Hyprland bug found
 - `Hyprland --verify-config` segfaults when the config calls `hl.timer` (Omarchy's startup-cursor does this in `config.reloaded`). Real sessions are unaffected. Upstream Hyprland candidate report.
+
+## Follow-ups after the first login
+- fcitx5 moved to layer 04: the session enables `omarchy-fcitx5.service`, which crash-looped every 2 s without it.
+- The user reset now runs once (marker `~/.local/state/omageeko/user-provisioned`); `OMAGEEKO_RESET_USER=1` forces it. Re-runs keep the user's changes.
