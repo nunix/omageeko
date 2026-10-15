@@ -20,3 +20,4 @@ Status: **verified in a real session 2026-10-15.** The first login landed in pla
 ## Follow-ups after the first login
 - fcitx5 moved to layer 04: the session enables `omarchy-fcitx5.service`, which crash-looped every 2 s without it.
 - The user reset now runs once (marker `~/.local/state/omageeko/user-provisioned`); `OMAGEEKO_RESET_USER=1` forces it. Re-runs keep the user's changes.
+- Branding: the screensaver shows the omageeko logo. Layer 04 swaps `~/.config/omarchy/branding/screensaver.txt` only while it is still Omarchy's stock logo, so a custom text is kept.

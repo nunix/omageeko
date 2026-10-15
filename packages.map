@@ -108,7 +108,7 @@ omasnap                08 @build                           # screenshot editor
 aether                 08 @build                           # theming tool (Go)
 gliff                  08 @build                           # Rust
 herdr                  08 @build                           # Rust
-ttfx                   08 @build                           # Rust
+ttfx                   02 @build                           # Rust
 omacalc                08 @build
 omacut                 08 @build
 omawrite               08 @build

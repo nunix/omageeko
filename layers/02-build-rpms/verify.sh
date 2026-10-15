@@ -7,7 +7,7 @@ fail=0
 ok() { printf '  \e[32mok\e[0m   %s\n' "$1"; }
 bad() { printf '  \e[31mFAIL\e[0m %s\n' "$1"; fail=1; }
 
-for rpm in quickshell owe owe-lockfeed omarchy-hyprland-titlebars hyprland-preview-share-picker jetbrains-mono-nerd-fonts ia-writer-fonts; do
+for rpm in quickshell owe owe-lockfeed omarchy-hyprland-titlebars hyprland-preview-share-picker jetbrains-mono-nerd-fonts ia-writer-fonts ttfx; do
   info=$(rpm -q --qf '%{VERSION}-%{RELEASE}' "$rpm" 2>/dev/null)
   if [[ $info == *omageeko* ]]; then ok "$rpm $info"; else bad "$rpm not installed from omageeko-local"; fi
 done
@@ -23,7 +23,7 @@ built_for=$(rpm -q --qf '%{RELEASE}' omarchy-hyprland-titlebars | sed -nE 's/.*\
 hypr=$(rpm -q --qf '%{VERSION}' hyprland)
 if [[ $built_for == "$hypr" ]]; then ok "titlebars built for hyprland $hypr"; else bad "titlebars built for $built_for, hyprland is $hypr: rebuild"; fi
 
-for cmd in owed owe owe-idle hyprland-preview-share-picker; do
+for cmd in owed owe owe-idle hyprland-preview-share-picker ttfx; do
   if command -v "$cmd" &>/dev/null; then ok "command: $cmd"; else bad "command missing: $cmd"; fi
 done
 if [[ -f /usr/lib/systemd/user/owed.service ]]; then ok "owed user unit"; else bad "owed user unit missing"; fi

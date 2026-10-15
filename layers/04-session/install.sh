@@ -96,6 +96,13 @@ else
   log "User already provisioned; keeping current dotfiles (OMAGEEKO_RESET_USER=1 to reset)"
 fi
 
+# omageeko branding: swap the screensaver text only while it is Omarchy's stock logo
+branding=~/.config/omarchy/branding/screensaver.txt
+if [[ ! -f $branding ]] || cmp -s "$branding" /usr/share/omageeko/omarchy-logo.txt; then
+  install -Dm644 /usr/share/omarchy/logo.txt "$branding"
+  log "Screensaver text: omageeko logo"
+fi
+
 # Make "Omarchy (Hyprland uwsm)" the default lightdm session for this user.
 # lightdm reads AccountsService first and falls back to ~/.dmrc.
 if busctl --system call org.freedesktop.Accounts "/org/freedesktop/Accounts/User$(id -u)" \

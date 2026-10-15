@@ -50,6 +50,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 |---|---|
 | `/usr/share/applications/chromium.desktop` (hidden) | Omarchy uses the `chromium.desktop` ID (default browser, web apps, mimeapps.list); TW ships `chromium-browser.desktop` |
 | `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf` (omageeko-hardware) | readable names for UCM laptop audio nodes (panel labels by node.nick) |
+| `/usr/share/omarchy/logo.txt` and skel `branding/screensaver.txt` | omageeko wordmark (Omarchy's block font; O/M/A glyphs reused) replaces the Omarchy logo; the original is kept at `/usr/share/omageeko/omarchy-logo.txt` |
 | `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports |
 
 ## Path changes

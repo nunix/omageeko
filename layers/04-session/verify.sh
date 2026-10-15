@@ -35,6 +35,8 @@ fi
 check "~/.bashrc sources Omarchy" grep -q 'default/bash/rc' ~/.bashrc
 patterns=$(grep -v '^#' "$OMAGEEKO_ROOT/layers/04-session/carryover.patterns" | grep -v '^$')
 if [[ -z $patterns ]] || grep -qEf <(echo "$patterns") ~/.bashrc; then ok "carry-over lines present in ~/.bashrc"; else bad "carry-over lines missing from ~/.bashrc"; fi
+check "screensaver shows the omageeko logo" cmp -s ~/.config/omarchy/branding/screensaver.txt /usr/share/omarchy/logo.txt
+check "ttfx available for the screensaver" command -v ttfx
 check "theme set" test -s ~/.local/state/omarchy/current/theme.name
 check "finalize-user marker" omarchy-done check finalize-user
 shipped=$(ls "$OMARCHY_PATH"/migrations/*.sh | wc -l)

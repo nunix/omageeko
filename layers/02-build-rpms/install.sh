@@ -18,6 +18,7 @@ PACKAGES=(
   hyprland-preview-share-picker
   jetbrains-mono-nerd-fonts
   ia-writer-fonts
+  ttfx
 )
 # RPM names to install (owe's spec also builds owe-lockfeed)
 INSTALL=(
@@ -28,6 +29,7 @@ INSTALL=(
   hyprland-preview-share-picker
   jetbrains-mono-nerd-fonts
   ia-writer-fonts
+  ttfx
 )
 
 require_user

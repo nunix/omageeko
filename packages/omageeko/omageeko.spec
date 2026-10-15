@@ -194,13 +194,15 @@ install -d %{buildroot}%{_datadir}/omarchy/default
 cp -a default/. %{buildroot}%{_datadir}/omarchy/default/
 install -Dm644 default/fonts/omarchy/omarchy.ttf %{buildroot}%{_datadir}/fonts/omarchy/omarchy.ttf
 
-install -Dm644 logo.txt %{buildroot}%{_datadir}/omarchy/logo.txt
+# omageeko wordmark (same block font as Omarchy's) replaces the Omarchy logo
+install -Dm644 %{_sourcedir}/overlay/share/branding/logo.txt %{buildroot}%{_datadir}/omarchy/logo.txt
 install -Dm644 logo.svg %{buildroot}%{_datadir}/omarchy/logo.svg
 install -Dm644 icon.txt %{buildroot}%{_datadir}/omarchy/icon.txt
 install -Dm644 icon.png %{buildroot}%{_datadir}/omarchy/icon.png
 install -Dm644 icon.png %{buildroot}%{_datadir}/pixmaps/omarchy.png
 install -Dm644 icon.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/omarchy.png
-install -Dm644 logo.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/screensaver.txt
+install -Dm644 %{_sourcedir}/overlay/share/branding/logo.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/screensaver.txt
+install -Dm644 logo.txt %{buildroot}%{_datadir}/omageeko/omarchy-logo.txt
 install -Dm644 icon.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/about.txt
 install -Dm644 default/hypr/toggles/flags.lua %{buildroot}%{_sysconfdir}/skel/.local/state/omarchy/toggles/hypr/flags.lua
 install -Dm644 default/nautilus-python/extensions/localsend.py %{buildroot}%{_sysconfdir}/skel/.local/share/nautilus-python/extensions/localsend.py

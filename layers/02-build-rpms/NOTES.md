@@ -13,3 +13,6 @@ Status: **built and verified 2026-10-15** (snapper pair 29..32). Waiting on the 
 ## Deferred
 - Omarchy apps (omasnap, aether, gliff, herdr, ttfx, omacalc, omacut, omawrite, signed, hype, monologue, cliamp, disktree, try, tzupdate) are in `packages.map` as `08 @build` and use this same pipeline in layer 08.
 - The pinned `omarchy-pkgs` commit is recorded, but the specs are hand-ported. When bumping, diff the PKGBUILDs between the old and new `pkgs_commit`.
+
+## 2026-10-15: ttfx
+- `ttfx` (omacom, Rust) added: the screensaver animates the branding text with it and failed without it. Moved from layer 08 to 02 in packages.map.
