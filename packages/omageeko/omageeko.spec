@@ -77,11 +77,15 @@ and the systemd drop-in that keeps the shell alive across compositor exits.
 %package        hardware
 Summary:        omageeko hardware integration for Tumbleweed laptops
 Requires:       wireplumber
+Requires:       socat
+Requires:       jq
 
 %description    hardware
 Hardware defaults omageeko adds on top of Omarchy: readable names for laptop
 codec devices exposed through ALSA UCM (headphone jack, headset mic, speakers,
-internal microphone) so Omarchy's audio panel can tell them apart.
+internal microphone) so Omarchy's audio panel can tell them apart, and a watcher
+that re-wakes monitors listed in ~/.config/omageeko/monitor-wake-kick when they
+reconnect after deep standby but stay dark.
 
 %prep
 %setup -q -n omarchy-%{commit}
@@ -227,6 +231,8 @@ install -Dm644 etc/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-sh
 # ---- omageeko-hardware (layer 05)
 install -Dm644 %{_sourcedir}/overlay/share/wireplumber/60-omageeko-ucm-labels.conf \
   %{buildroot}%{_datadir}/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
+install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-monitor-wake-kick.service \
+  %{buildroot}%{_userunitdir}/omageeko-monitor-wake-kick.service
 
 %check
 # Every sudoers rule must parse
@@ -305,3 +311,5 @@ done
 
 %files hardware
 %{_datadir}/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
+%{_bindir}/omageeko-monitor-wake-kick
+%{_userunitdir}/omageeko-monitor-wake-kick.service

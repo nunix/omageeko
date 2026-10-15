@@ -1,0 +1,14 @@
+[Unit]
+Description=omageeko: re-wake monitors that stay dark after deep standby
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionPathExists=%h/.config/omageeko/monitor-wake-kick
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/omageeko-monitor-wake-kick
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

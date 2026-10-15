@@ -63,6 +63,15 @@ if [[ -d $host_dir ]]; then
   done < <(find "$host_dir" -type f -print0)
 fi
 
+# Monitor wake kick: only runs when a host/user config lists monitors to watch
+systemctl --user daemon-reload
+if [[ -f ~/.config/omageeko/monitor-wake-kick ]]; then
+  systemctl --user enable omageeko-monitor-wake-kick.service
+  if systemctl --user is-active --quiet graphical-session.target; then
+    systemctl --user restart omageeko-monitor-wake-kick.service
+  fi
+fi
+
 # The audio labels now ship system-wide in omageeko-hardware
 rm -f ~/.config/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
 systemctl --user restart wireplumber

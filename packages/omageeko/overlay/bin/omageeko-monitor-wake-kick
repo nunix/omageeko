@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# omarchy:summary=Re-wake monitors that stay dark after deep standby (DPMS cycle on reconnect)
+# omarchy:args=[--kick-now|--list]
+# omarchy:hidden=true
+# omageeko: some monitors (e.g. a Samsung Odyssey G9 in picture-by-picture) drop
+# an input in deep standby and, once Hyprland re-adds it, keep their panels dark
+# although every output reports DPMS on. A DPMS off/on cycle wakes them.
+# Monitors are matched (description or name, substring) against the lines of
+# ${XDG_CONFIG_HOME:-~/.config}/omageeko/monitor-wake-kick. Without that file
+# this does nothing.
+
+config="${XDG_CONFIG_HOME:-$HOME/.config}/omageeko/monitor-wake-kick"
+
+patterns() {
+  [[ -f $config ]] && grep -vE '^[[:space:]]*(#|$)' "$config"
+}
+
+# Names of connected, enabled monitors matching a configured pattern
+matching_monitors() {
+  local pats
+  pats=$(patterns) || return 0
+  hyprctl monitors -j 2>/dev/null | jq -r --arg pats "$pats" '
+    ($pats | split("\n") | map(select(length > 0))) as $p
+    | .[] | select(.disabled | not)
+    | select(. as $m | any($p[]; . as $x | ($m.description | contains($x)) or ($m.name == $x)))
+    | .name'
+}
+
+kick() {
+  local monitors=() m
+  mapfile -t monitors < <(matching_monitors)
+  (( ${#monitors[@]} )) || return 0
+  echo "Waking: ${monitors[*]}"
+  for m in "${monitors[@]}"; do
+    hyprctl dispatch "hl.dsp.dpms({ action = \"disable\", monitor = \"$m\" })" >/dev/null
+  done
+  sleep 1
+  for m in "${monitors[@]}"; do
+    hyprctl dispatch "hl.dsp.dpms({ action = \"enable\", monitor = \"$m\" })" >/dev/null
+  done
+}
+
+case "${1:-}" in
+  --list)
+    matching_monitors
+    exit 0
+    ;;
+  --kick-now)
+    kick
+    exit 0
+    ;;
+esac
+
+if ! patterns >/dev/null; then
+  echo "No monitors configured in $config; nothing to watch."
+  exit 0
+fi
+
+socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} || ! -S $socket ]]; then
+  echo "Hyprland event socket not found" >&2
+  exit 1
+fi
+
+echo "Watching for reconnects of: $(patterns | paste -sd, -)"
+while read -r event; do
+  case "$event" in
+    monitoraddedv2\>\>*)
+      # monitoraddedv2>>ID,NAME,DESCRIPTION
+      added=${event#monitoraddedv2>>}
+      if patterns | while read -r p; do [[ $added == *"$p"* ]] && exit 0; done; then
+        # Let the output finish its modeset before cycling it
+        sleep 2
+        kick
+      fi
+      ;;
+  esac
+done < <(socat -U - "UNIX-CONNECT:$socket")

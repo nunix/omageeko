@@ -26,6 +26,7 @@ Make the laptop hardware work the Omarchy way:
   - Removed from `stubs.tsv`.
 - **Patch `omarchy-remove-security-fingerprint`:** guard the `/etc/pam.d/sudo` grep (the file exists on TW only after `--all`).
 - **`omageeko-hardware`** ships `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf`. UCM laptop nodes otherwise take `node.nick` from the codec PCM name ("ALC257 Analog") for both the headphone jack and the headset mic, and Omarchy's audio panel labels rows by `node.nick`. The rule names `HiFi__Headphones/Speaker/Mic1/Mic2` nodes "Headphones (jack)", "Laptop speakers", "Laptop microphone" and "Headset mic (jack)".
+- **`omageeko-monitor-wake-kick`** (user service, in omageeko-hardware) watches Hyprland's socket2 for `monitoraddedv2`. When the re-added monitor matches a line (description substring or output name) in `~/.config/omageeko/monitor-wake-kick`, it waits 2 s and cycles DPMS on every matching monitor. Without that file the unit is skipped (`ConditionPathExists`). Layer 05 enables it when the config exists (supplied by the host file). `--list` shows the matching outputs; `--kick-now` runs a cycle by hand.
 - TW's alsa-ucm-conf exposes Speaker and Headphones as **separate card profiles**. While the jack is plugged, only the Headphones sink exists, and unplugging switches back to the speaker. That's expected UCM behaviour, not a bug.
 
 ## Verification

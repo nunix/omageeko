@@ -53,6 +53,13 @@ if [[ -d $host_dir ]]; then
   if [[ -z $drift ]]; then ok "host files applied ($(basename "$(dirname "$host_dir")"))"; else info "host files differ from \$HOME (local edits?): $drift"; fi
 fi
 
+if [[ -f ~/.config/omageeko/monitor-wake-kick ]]; then
+  check "monitor wake-kick watcher enabled" systemctl --user is-enabled omageeko-monitor-wake-kick.service
+  if systemctl --user is-active --quiet graphical-session.target; then
+    check "monitor wake-kick watcher running" systemctl --user is-active omageeko-monitor-wake-kick.service
+  fi
+fi
+
 check "AMD Vulkan driver" rpm -q libvulkan_radeon
 
 exit $fail
