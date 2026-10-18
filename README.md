@@ -5,6 +5,7 @@ Omarchy (quattro) desktop on openSUSE Tumbleweed, built layer by layer. See `PLA
 ## Layout
 
 ```
+UPDATE-PLAN.md         omageeko-update (OS → omageeko → apps) design, upstream churn measurements
 upstream.lock          pinned omacom/omarchy (quattro) and omacom/omarchy-pkgs commits
 upstream/              fetched upstream tree (not edited, regenerated from the lock)
 packages.map           every upstream package -> TW package / @build / @flatpak / skip, with owning layer
