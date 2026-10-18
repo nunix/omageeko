@@ -66,6 +66,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | File | Why |
 |---|---|
 | `/usr/share/applications/chromium.desktop` (hidden) | Omarchy uses the `chromium.desktop` ID (default browser, web apps, mimeapps.list); TW ships `chromium-browser.desktop` |
+| `/usr/lib/udev/rules.d/60-omageeko-ddcutil-i2c.rules` (omageeko-hardware) | ddcutil's uaccess rule for display I2C buses: Arch installs it, TW only ships it as a sample, so the shell's `ddcutil detect` failed with EACCES and external-monitor brightness didn't work |
 | `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf` (omageeko-hardware) | readable names for UCM laptop audio nodes (panel labels by node.nick) |
 | `/usr/share/omarchy/logo.txt` and skel `branding/screensaver.txt` | omageeko wordmark (Omarchy's block font; O/M/A glyphs reused) replaces the Omarchy logo; the original is kept at `/usr/share/omageeko/omarchy-logo.txt` |
 | `/usr/bin/omageeko-monitor-wake-kick` + user unit (omageeko-hardware) | re-wake monitors listed in `~/.config/omageeko/monitor-wake-kick` with a DPMS cycle when they reconnect after deep standby (Odyssey G9 quirk) |
@@ -83,6 +84,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | install.package, remove.package | openSUSE logo instead of Arch |
 | install.aur | label "Flathub" (all translations), package icon |
 | install.opi, remove.flatpak | inserted (after install.aur / remove.package) |
+| update.omarchy | label "Omageeko" (all translations): runs omageeko-update |
 | update.channel.rc, update.channel.edge | dropped (omageeko: Stable = pinned upstream, Dev = linked checkout) |
 
 ## Vendor repositories (`overlay/share/repos.tsv` → /usr/share/omageeko/repos.tsv)

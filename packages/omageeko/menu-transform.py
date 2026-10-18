@@ -13,6 +13,7 @@ SET = [
     ("remove.package", "icon", ""),
     ("install.aur", "icon", "\U000f03d7"),       # package glyph: Flathub replaces the AUR
     ("install.aur", "label", "Flathub"),
+    ("update.omarchy", "label", "Omageeko"),    # runs omageeko-update (Tumbleweed, omageeko, apps)
 ]
 # menu ids to drop (with their children): channels that don't exist on omageeko
 DROP = ["update.channel.rc", "update.channel.edge"]
@@ -24,7 +25,7 @@ INSERT = [
         "action": "xdg-terminal-exec --app-id=org.omarchy.terminal omarchy-pkg-flatpak-remove"}),
 ]
 # translated labels to override in every language that defines them (brand names)
-I18N_LABELS = {"install.aur": "Flathub"}
+I18N_LABELS = {"install.aur": "Flathub", "update.omarchy": "Omageeko"}
 
 def entry_re(mid):
     return re.compile(r'^(\s*"' + re.escape(mid) + r'"\s*:\s*\{)(.*)(\},?\s*)$', re.M)

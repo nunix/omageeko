@@ -244,6 +244,7 @@ install -Dm644 etc/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-sh
 # ---- omageeko-hardware (layer 05)
 install -Dm644 %{_sourcedir}/overlay/share/wireplumber/60-omageeko-ucm-labels.conf \
   %{buildroot}%{_datadir}/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
+install -Dm644 %{_sourcedir}/overlay/share/udev/60-omageeko-ddcutil-i2c.rules %{buildroot}%{_udevrulesdir}/60-omageeko-ddcutil-i2c.rules
 install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-monitor-wake-kick.service \
   %{buildroot}%{_userunitdir}/omageeko-monitor-wake-kick.service
 install -Dm755 %{_sourcedir}/overlay/share/libexec/bt-device-privacy %{buildroot}%{_libexecdir}/omageeko/bt-device-privacy
@@ -270,6 +271,8 @@ done
 %license LICENSE
 %{_bindir}/omarchy*
 %{_bindir}/omageeko-box
+%{_bindir}/omageeko-update
+%{_bindir}/omageeko-link-skills
 %exclude %{_bindir}/omarchy-upload-log
 %exclude %{_bindir}/omarchy-debug
 %exclude %{_bindir}/omarchy-debug-idle
@@ -329,8 +332,14 @@ done
 %dir %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d
 %config %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
 
+%post hardware
+# ddcutil i2c rule: apply to the existing devices without a reboot
+udevadm control --reload >/dev/null 2>&1 || :
+udevadm trigger --subsystem-match=i2c-dev --action=change >/dev/null 2>&1 || :
+
 %files hardware
 %{_datadir}/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf
+%{_udevrulesdir}/60-omageeko-ddcutil-i2c.rules
 %{_bindir}/omageeko-monitor-wake-kick
 %{_userunitdir}/omageeko-monitor-wake-kick.service
 %dir %{_libexecdir}/omageeko
