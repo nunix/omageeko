@@ -43,6 +43,10 @@ Gotchas:
 - `--no-recommends` matches Omarchy's lean installs; Tumbleweed's default pulls recommends.
 - Flatpak apps resolve URL handlers through `XDG_DATA_DIRS`; the session gets the Flatpak export dirs from `/usr/share/uwsm/env.d/20-omageeko-flatpak`.
 
+## mise (part of the Omarchy layer)
+
+mise is how Omarchy installs its default CLI tools (claude, codex, gh, opencode… as wrappers in `~/.local/bin` or mise command wrappers), agent-account switching (`/etc/mise/conf.d/omarchy-agent-accounts.toml` routes `claude`/`codex`/`grok` through `omarchy-agent-account-exec`, which still runs the native binary and keeps `~/.claude` unless an account is selected) and language runtimes (Install › Development → `omarchy-install-dev-env`, which compiles some runtimes with the host toolchain: `base-devel` + `-devel` headers are installed by layer 03). Prefer mise for anything Omarchy installs with mise; don't add an RPM of the same tool (it would be shadowed in PATH anyway).
+
 ## Menus
 
 Install › Package / Remove › Package use zypper; Install › "Flathub" (upstream's AUR slot) lists Flathub apps; Install › OPI searches OBS/Packman; Remove › Flatpak removes Flatpak apps.

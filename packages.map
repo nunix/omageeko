@@ -41,7 +41,7 @@ git                    01 git
 fakeroot               01 fakeroot
 dosfstools             01 dosfstools
 exfatprogs             01 exfatprogs
-mise-bin               01 @repo:mise:mise                       # https://mise.jdx.dev/rpm (upstream RPM repo)
+mise-bin               03 @repo:mise:mise                       # https://mise.jdx.dev/rpm; installed by layer 03 (Omarchy layer)
 usage                  -  -                                # not in the mise RPM repo; per-user: `mise use -g usage`
 inetutils              01 hostname                         # only hostname is used; telnet/ftp not needed
 lua51                  01 luajit                           # neovim uses LuaJIT (5.1 ABI)
@@ -197,7 +197,8 @@ obsidian               06 @flatpak:md.obsidian.Obsidian
 omarchy-nvim           06 @build                          # LazyVim with cached plugins, seeded via /etc/skel
 
 # --- skipped: Arch-only or replaced
-base-devel             -  -                                # toolchains live in the builder container
+base-devel             03 gcc,gcc-c++,make,patch,autoconf,automake,libtool,bison,flex,gettext-tools,pkgconf,m4,which,file  # mise compiles runtimes (ruby, php, erlang) on the host, as on Arch
++mise-build-headers    03 libopenssl-devel,zlib-devel,readline-devel,libffi-devel,libyaml-devel,ncurses-devel,gmp-devel  # extra: Arch libraries ship headers; TW splits them into -devel
 expac                  -  -                                # pacman tool
 pacman-contrib         -  -                                # pacman tool
 yay                    -  -                                # AUR helper; zypper + local repo instead

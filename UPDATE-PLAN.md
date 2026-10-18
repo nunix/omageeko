@@ -94,6 +94,10 @@ With a remote repo, a CI job runs `omageeko-bump` on each upstream tag and opens
 | B | `omageeko-bump` with gates 1–8, improved migration and package audits; first real bump: v4.0.4 → v4.0.5 (fix remove-preinstalls, review 6 replaced files, #15655 vs host workspaces) | medium |
 | C | remote repo (OBS or GH Actions) + CI bump bot → two-stage update | medium, needs a hosting decision |
 
+## Repos by stage (2026-10-18)
+
+Stage 1 `zypper dup --from` the Tumbleweed repos (openSUSE distribution repos, codecs, Packman, classified by URL). Stage 2 updates `omageeko-local` and `mise`, then `mise up`: mise is Omarchy's installer for its default tools and runtimes, so it belongs to the Omarchy layer (layer 03 installs it with `base-devel` and the `-devel` headers mise builds against). Stage 3 updates every other repo (vendor apps, OBS add-ons), Flatpak and the box.
+
 ## Decisions (2026-10-18)
 
 1. **Track releases, never downgrade.** Omarchy cuts releases on maintenance branches (`v4-0-5` forked from quattro on 2026-08-14), so the Oct 14 quattro pin is ~945 commits ahead of v4.0.5. Moving to v4.0.5 would mean 7 of 18 patches failing, the menu transform failing and 51 already-run migrations missing. `track=stable` therefore takes only a release tag that *contains* the pin. It holds until the next release is cut from quattro (expected v4.1.0), then follows that line. `track=edge` follows quattro with the same gates.

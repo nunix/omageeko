@@ -14,7 +14,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-pkg-remove | fzf over zypper's user-installed set (≈ `pacman -Qqe`) |
 | omarchy-pkg-aur-install | fzf over Flathub apps |
 | omarchy-update-pacman | `zypper` in a PID 1 scope (args are zypper args) |
-| omarchy-update-system-pkgs | `zypper refresh` + `zypper dup`; interactive retry on solver questions |
+| omarchy-update-system-pkgs | `zypper refresh` + `zypper dup` (restricted with `--from` to `OMAGEEKO_DUP_FROM` when omageeko-update passes the Tumbleweed repos); interactive retry on solver questions |
 | omarchy-update-system-pkgs-when-conflicted | re-runs update-system-pkgs |
 | omarchy-update-pkg-prune | `zypper clean` (packages only) |
 | omarchy-update-keyring | `zypper refresh` (repo keys are zypper's) |
@@ -35,7 +35,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-hyprland-workspace-carousel (new, from omarchy-mac feature/workspace-carousel) | wrapping workspace cycle on the focused monitor; bound by host files (`docs/touchpad-and-mouse.md`) |
 | omarchy-hyprland-window-swap-columns (new) | swap a workspace's two columns in one step (dwindle swapsplit / row swaps, scrolling swapcol); bound by host files (`docs/desk-workspaces.md`) |
 | omarchy-update | thin wrapper: `exec omageeko-update` (upstream's pacman/AUR chain doesn't apply; `-y` accepted) |
-| omageeko-update (new) | three stages, each runs regardless of the previous: Tumbleweed `zypper dup` → omageeko (gated upstream bump, rebuild stale RPMs, gated migrations) → apps (Flatpak, box, mise); applies right away and reports reboot need (Aeon style). See `UPDATE-PLAN.md` |
+| omageeko-update (new) | three stages, each runs regardless of the previous: Tumbleweed (`zypper dup` from openSUSE/Packman repos) → omageeko (gated upstream bump, rebuilt RPMs, mise + `mise up`, gated migrations) → apps (vendor repos, Flatpak, box); applies right away and reports reboot need (Aeon style). See `UPDATE-PLAN.md` |
 | omageeko-link-skills (new) | links `/usr/share/omageeko/agents/skills/omageeko` into the agent skill dirs Omarchy uses (+ opencode) |
 | omarchy-snapshot | create: snapper (all configs). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
 

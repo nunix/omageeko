@@ -15,13 +15,13 @@ if [[ -z $unmapped ]]; then ok "packages.map covers upstream base list"; else ba
 
 # All layer 01 packages installed
 missing=()
-for pkg in $(map_packages 01) mise; do
+for pkg in $(map_packages 01); do
   rpm -q --whatprovides "$pkg" &>/dev/null || missing+=("$pkg")
 done
 if (( ${#missing[@]} == 0 )); then ok "all layer 01 packages installed"; else bad "missing: ${missing[*]}"; fi
 
 # Key commands run
-for cmd in bat btop eza fd fzf rg zoxide starship fastfetch lazygit gum jq nvim tldr tmux mise foot wl-copy grim slurp hyprpicker magick tesseract ffmpeg yt-dlp; do
+for cmd in bat btop eza fd fzf rg zoxide starship fastfetch lazygit gum jq nvim tldr tmux foot wl-copy grim slurp hyprpicker magick tesseract ffmpeg yt-dlp; do
   command -v "$cmd" &>/dev/null || { bad "command missing: $cmd"; continue; }
 done
 (( fail == 0 )) && ok "key commands present"

@@ -29,6 +29,8 @@ Requires:       wireplumber
 Requires:       pipewire
 Requires:       gnome-keyring
 Requires:       gum
+# Omarchy installs its default CLI tools and runtimes with mise (mise.jdx.dev RPM repo, added by layer 03)
+Requires:       mise
 Requires:       jq
 Requires:       git-core
 Requires:       perl

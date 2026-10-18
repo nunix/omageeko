@@ -6,9 +6,9 @@
 
 | Stage | Does |
 |---|---|
-| 1 base | `zypper refresh` + `zypper dup` (non-interactive; a solver question fails the stage and tells the user to run `sudo zypper dup` in a terminal) |
-| 2 omageeko | newer Omarchy release → `omageeko-bump run --apply --install` (only if every gate is green); rebuild stale omageeko RPMs in the builder container and update from `omageeko-local`; then migrations, gated |
-| 3 apps | `flatpak update` (system + user), `omageeko-box update`, `omarchy-update-mise` |
+| 1 base | `zypper dup --from` the Tumbleweed repos only (openSUSE distribution repos, codecs, Packman; classified by URL). Non-interactive; a solver question fails the stage and tells the user to run `sudo zypper dup` in a terminal |
+| 2 omageeko | newer Omarchy release → `omageeko-bump run --apply --install` (only if every gate is green); rebuild stale omageeko RPMs; `zypper update` from `omageeko-local` + `mise`; `mise up` for the tools Omarchy installs with mise (listed in the summary); then migrations, gated |
+| 3 apps | `zypper update` from vendor/add-on repos (Brave, Chrome, OBS home projects…), `flatpak update` (system + user), `omageeko-box update` |
 
 - `omageeko-update --check` lists what's pending and changes nothing.
 - The log is in `~/.local/state/omageeko/update.log`; the last result is in `~/.local/state/omageeko/last-update.json`.

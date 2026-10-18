@@ -54,3 +54,12 @@ Shipped migrations are marked done at provisioning, but migrations added by a ne
 - that TW's os-release and nsswitch are untouched, sudoers parse, and clean login shells get `OMARCHY_PATH`
 
 The current graphical session inherits `PROFILEREAD`, so `OMARCHY_PATH` appears only after a re-login.
+
+## mise (Omarchy layer, since 2026-10-18)
+
+mise is Omarchy's installer for its default CLI tools (`omarchy-mise-install`: claude, codex, gh, opencode…), the agent-account wrappers (`/etc/mise/conf.d/omarchy-agent-accounts.toml`) and language runtimes (`omarchy-install-dev-env`). Layer 03 therefore:
+
+1. adds the mise upstream RPM repo (`https://mise.jdx.dev/rpm`, alias `mise`, priority 95, key `https://mise.jdx.dev/gpg-key.pub`) and installs `mise`; the omageeko RPM `Requires: mise`;
+2. installs `map_packages 03`: `base-devel` mapped to the Tumbleweed toolchain plus `+mise-build-headers` (`-devel` packages), because mise compiles Ruby, PHP and Erlang on the host and Arch ships library headers with the libraries.
+
+`omageeko-update` updates mise and its tools in stage 2 (omageeko), not stage 1 (Tumbleweed `zypper dup` is limited to the openSUSE/Packman repos).

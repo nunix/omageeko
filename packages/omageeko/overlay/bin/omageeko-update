@@ -5,10 +5,11 @@
 # omarchy:requires-sudo=true
 # omageeko: replaces omarchy update. Three stages run in order and each one
 # runs even when an earlier one had nothing to do or failed:
-#   1 base      Tumbleweed snapshot (zypper dup)
+#   1 base      Tumbleweed snapshot: zypper dup from the openSUSE/Packman repos only
 #   2 omageeko  newer Omarchy release (omageeko-bump, gated), rebuilt omageeko
-#               RPMs, then Omarchy migrations (Arch-only ones held for review)
-#   3 apps      Flatpak, the omageeko-arch box, mise tools
+#               RPMs, mise and the tools Omarchy installs with it, then Omarchy
+#               migrations (Arch-only ones held for review)
+#   3 apps      vendor app repos (Brave, Chrome, OBS add-ons…), Flatpak, the box
 # Like Aeon, updates are applied right away (snapper keeps the pre-update
 # state) and the summary says when a reboot or re-login makes them take effect.
 # Stage 2 needs the omageeko checkout: `source=` in ~/.config/omageeko/update.conf,
@@ -29,12 +30,42 @@ say() { echo -e "\e[1;34m[omageeko-update]\e[0m $*"; }
 warn() { echo -e "\e[33m[omageeko-update] $*\e[0m" >&2; }
 set_result() { result[$1]=$2; }
 
+# Enabled zypper repos by stage, from their URLs: Tumbleweed itself (openSUSE
+# distribution repos, codecs, Packman) / the Omarchy layer (omageeko-local,
+# mise) / vendor and add-on app repos (everything else, OBS home projects too)
+declare -a base_repos=() omarchy_repos=() app_repos=()
+while read -r alias url; do
+  case "$alias" in
+  omageeko-local | mise) omarchy_repos+=("$alias") ;;
+  *)
+    if [[ $url =~ opensuse\.org/(tumbleweed|update/tumbleweed|history|source|debug)|codecs\.opensuse\.org|/packman/ ]]; then
+      base_repos+=("$alias")
+    else
+      app_repos+=("$alias")
+    fi
+    ;;
+  esac
+done < <(zypper --no-refresh lr -E -u 2>/dev/null | awk -F'|' '/^ *[0-9]+ *[|]/ { gsub(/ /, "", $2); gsub(/ /, "", $NF); print $2, $NF }')
+
+repo_args() {
+  local repo
+  for repo in "$@"; do printf -- '--repo\n%s\n' "$repo"; done
+}
+
+# Package set fingerprint, to tell "updated" from "nothing to do"
+rpm_state() { rpm -qa --qf '%{NVRA}\n' | sort | md5sum; }
+
 check_only() {
   say "Checking (nothing is changed)"
   local snapshot
   snapshot=$(omarchy-update-available 2>/dev/null) && echo "  base/omageeko RPMs: $snapshot" || echo "  base: up to date"
   if [[ -n $source_dir ]]; then
     echo "  omageeko upstream: $("$source_dir/tools/omageeko-bump" check 2>&1 | tail -1)"
+  fi
+  echo "  mise tools: $(MISE_MINIMUM_RELEASE_AGE=0 mise outdated --json 2>/dev/null | jq 'length' 2>/dev/null || echo "?") outdated"
+  if ((${#app_repos[@]})); then
+    mapfile -t args < <(repo_args "${app_repos[@]}")
+    echo "  vendor apps: $(zypper --no-refresh -q list-updates "${args[@]}" 2>/dev/null | grep -c '^v ') update(s) (${app_repos[*]})"
   fi
   echo "  flatpak: $(flatpak remote-ls --updates --columns=application 2>/dev/null | wc -l) update(s)"
   exit 0
@@ -61,9 +92,9 @@ omarchy-update-stay-awake start 2>/dev/null
 
 # --- 1 base: Tumbleweed
 say "1/3 Tumbleweed"
-before=$(rpm -qa --last | head -1)
-if OMARCHY_UPDATE_UNATTENDED=1 omarchy-update-system-pkgs; then
-  [[ $(rpm -qa --last | head -1) == "$before" ]] && set_result base "up to date" || set_result base "updated"
+before=$(rpm_state)
+if OMAGEEKO_DUP_FROM="${base_repos[*]}" OMARCHY_UPDATE_UNATTENDED=1 omarchy-update-system-pkgs; then
+  [[ $(rpm_state) == "$before" ]] && set_result base "up to date" || set_result base "updated"
 else
   set_result base "FAILED (zypper needs a decision: run sudo zypper dup in a terminal)"
 fi
@@ -86,14 +117,33 @@ if [[ -n $source_dir ]]; then
   mapfile -t packages < <(cd "$source_dir/packages" && ls -d -- */ | tr -d /)
   if (cd "$source_dir" && bash -c 'source lib/common.sh && check_builder_snapshot && build_packages "$@"' _ "${packages[@]}") \
     >"$state_dir/build.out" 2>&1; then
-    before=$(rpm -qa 'omageeko*' --qf '%{NVR}\n' | sort | md5sum)
-    sudo zypper --non-interactive refresh omageeko-local >/dev/null
-    sudo zypper --non-interactive update --repo omageeko-local >/dev/null ||
-      omageeko_notes+=("FAILED installing rebuilt RPMs: sudo zypper update --repo omageeko-local")
-    # Built packages other than omageeko itself count too
-    [[ $(rpm -qa 'omageeko*' --qf '%{NVR}\n' | sort | md5sum) != "$before" ]] && omageeko_notes+=("omageeko RPMs updated")
+    :
   else
     omageeko_notes+=("FAILED rebuild: see $state_dir/build.out")
+  fi
+fi
+
+# The Omarchy layer's RPMs: rebuilt omageeko packages and mise itself
+mise_before=$(rpm -q --qf '%{VERSION}' mise 2>/dev/null)
+before=$(rpm_state)
+if ((${#omarchy_repos[@]})); then
+  mapfile -t args < <(repo_args "${omarchy_repos[@]}")
+  sudo zypper --non-interactive refresh "${omarchy_repos[@]}" >/dev/null
+  sudo zypper --non-interactive update "${args[@]}" >/dev/null ||
+    omageeko_notes+=("FAILED installing omageeko/mise RPMs: sudo zypper update ${args[*]}")
+fi
+mise_after=$(rpm -q --qf '%{VERSION}' mise 2>/dev/null)
+[[ $mise_after != "$mise_before" ]] && omageeko_notes+=("mise $mise_before → $mise_after")
+[[ $(rpm_state) != "$before" && $mise_after == "$mise_before" ]] && omageeko_notes+=("omageeko RPMs updated")
+
+# Tools Omarchy installs with mise (default CLIs, agents, language runtimes)
+if command -v mise >/dev/null; then
+  outdated=$(MISE_MINIMUM_RELEASE_AGE=0 mise outdated --json 2>/dev/null)
+  if omarchy-update-mise >"$state_dir/mise.out" 2>&1; then
+    tools=$(jq -r 'to_entries | map("\(.key) \(.value.current) → \(.value.latest)") | join(", ")' <<<"${outdated:-"{}"}" 2>/dev/null)
+    [[ -n $tools ]] && omageeko_notes+=("mise tools: $tools")
+  else
+    omageeko_notes+=("FAILED mise tools: see $state_dir/mise.out")
   fi
 fi
 
@@ -117,9 +167,18 @@ fi
 omageeko-link-skills >/dev/null
 set_result omageeko "${omageeko_notes[*]:-up to date}"
 
-# --- 3 apps: Flatpak, the Arch box, mise
+# --- 3 apps: vendor app repos, Flatpak, the Arch box
 say "3/3 apps"
 apps_notes=()
+if ((${#app_repos[@]})); then
+  mapfile -t args < <(repo_args "${app_repos[@]}")
+  before=$(rpm_state)
+  if sudo zypper --non-interactive update --auto-agree-with-licenses "${args[@]}" >"$state_dir/apps.out" 2>&1; then
+    [[ $(rpm_state) != "$before" ]] && apps_notes+=("vendor apps updated (${app_repos[*]})")
+  else
+    apps_notes+=("FAILED vendor apps: see $state_dir/apps.out")
+  fi
+fi
 if command -v flatpak >/dev/null; then
   sudo flatpak update --system --noninteractive -y >/dev/null 2>&1 || apps_notes+=("FAILED flatpak (system)")
   flatpak update --user --noninteractive -y >/dev/null 2>&1 || true
@@ -128,8 +187,7 @@ fi
 if command -v omageeko-box >/dev/null && podman container exists omageeko-arch 2>/dev/null; then
   omageeko-box update >/dev/null 2>&1 && apps_notes+=("box updated") || apps_notes+=("FAILED box update")
 fi
-omarchy-update-mise >/dev/null 2>&1 || apps_notes+=("FAILED mise")
-set_result apps "${apps_notes[*]}"
+set_result apps "${apps_notes[*]:-up to date}"
 
 omarchy-update-analyze-logs 2>/dev/null
 omarchy-shell -q omarchy.system-update clear 2>/dev/null

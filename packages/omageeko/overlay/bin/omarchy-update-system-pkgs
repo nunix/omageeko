@@ -10,9 +10,16 @@ echo -e "\e[32m\nUpdate system packages\e[0m"
 
 omarchy-update-pacman --non-interactive refresh
 
+# omageeko-update passes the Tumbleweed repos (OMAGEEKO_DUP_FROM): the omageeko
+# RPMs, mise and vendor app repos are updated by its later stages instead
+from=()
+for repo in ${OMAGEEKO_DUP_FROM:-}; do
+  from+=(--from "$repo")
+done
+
 # Unattended runs can't answer solver questions. Interactive runs retry with
 # zypper's prompts when the non-interactive pass hits a conflict.
-if omarchy-update-pacman --non-interactive dist-upgrade --auto-agree-with-licenses; then
+if omarchy-update-pacman --non-interactive dist-upgrade --auto-agree-with-licenses "${from[@]}"; then
   exit 0
 fi
 
@@ -22,4 +29,4 @@ if [[ ${OMARCHY_UPDATE_UNATTENDED:-0} == "1" || ! -t 0 ]]; then
 fi
 
 echo -e "\e[33m\nzypper needs a decision to continue:\e[0m"
-exec omarchy-update-pacman dist-upgrade --auto-agree-with-licenses
+exec omarchy-update-pacman dist-upgrade --auto-agree-with-licenses "${from[@]}"

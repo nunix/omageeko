@@ -15,11 +15,11 @@ Install the Tumbleweed equivalents of upstream's `install/omarchy-base.packages`
 
 ## Steps (as in `install.sh`)
 
-1. Add the mise upstream RPM repo (`https://mise.jdx.dev/rpm`, alias `mise`, priority 95). Import its key from `https://mise.jdx.dev/gpg-key.pub`.
+1. (mise moved to layer 03 on 2026-10-18: it is Omarchy's tool installer, so it belongs to the Omarchy layer.)
 2. Replace conflicting TW defaults in a single zypper transaction (`zypper install new -old`):
    - `hyprland-qtutils` → `hyprland-guiutils` (renamed upstream; the hyprland pattern only *recommends* qtutils)
    - `busybox-man` → `man`
-3. Install `map_packages 01` plus `mise` with `--no-recommends` (only missing packages).
+3. Install `map_packages 01` with `--no-recommends` (only missing packages).
 4. Run `fc-cache -f`.
 
 Wrap the run in a snapper pre/post pair (`snap_begin "01-base-packages"` / `snap_end`). It must be idempotent.
