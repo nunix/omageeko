@@ -23,3 +23,7 @@ awk '!/^#/ && NF >= 3 && $1 !~ /^\+/ {
   if ((i = index($0, "#")) > 0) { note = substr($0, i + 1); sub(/^ +/, "", note) }
   printf "%s\t%s\t%s\n", $1, $3, note
 }' "$root/packages.map" > "$pkg/pkgmap.tsv"
+
+# The migration classifier ships in the RPM (omageeko-update gates migrations
+# with it even without a checkout); the source of truth is tools/omageeko-bump
+install -m755 "$root/tools/omageeko-bump" "$pkg/omageeko-bump"

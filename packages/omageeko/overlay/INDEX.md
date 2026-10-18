@@ -22,7 +22,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-update-orphan-pkgs | zypper `--unneeded` set; reports only under `-y`, removal always asks (patterns can make packages look unneeded) |
 | omarchy-update-aur-pkgs | `flatpak update` + `omageeko-box update` |
 | omarchy-update-analyze-logs | warns on dracut/sdbootutil errors |
-| omarchy-update-available | newer TW snapshot (`media.1/products`) + newer omageeko-local RPMs; feeds the bar's update widget |
+| omarchy-update-available | newer TW snapshot (`media.1/products`, last field: the file reads `/ openSUSE <date>-<n>`) + newer omageeko-local RPMs; feeds the bar's update widget |
 | omarchy-version | omageeko RPM version-release |
 | omarchy-version-pkgs | newest rpm install time |
 | omarchy-version-channel | `tumbleweed / omageeko` |
@@ -34,6 +34,9 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-agent-usage-agy / -hermes (new, from omaweed) | Antigravity/Vertex and Hermes usage collectors; no balance emitted when nothing was spent |
 | omarchy-hyprland-workspace-carousel (new, from omarchy-mac feature/workspace-carousel) | wrapping workspace cycle on the focused monitor; bound by host files (`docs/touchpad-and-mouse.md`) |
 | omarchy-hyprland-window-swap-columns (new) | swap a workspace's two columns in one step (dwindle swapsplit / row swaps, scrolling swapcol); bound by host files (`docs/desk-workspaces.md`) |
+| omarchy-update | thin wrapper: `exec omageeko-update` (upstream's pacman/AUR chain doesn't apply; `-y` accepted) |
+| omageeko-update (new) | three stages, each runs regardless of the previous: Tumbleweed `zypper dup` → omageeko (gated upstream bump, rebuild stale RPMs, gated migrations) → apps (Flatpak, box, mise); applies right away and reports reboot need (Aeon style). See `UPDATE-PLAN.md` |
+| omageeko-link-skills (new) | links `/usr/share/omageeko/agents/skills/omageeko` into the agent skill dirs Omarchy uses (+ opencode) |
 | omarchy-snapshot | create: snapper (all configs). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
 
 ## Patches (`patches/`, applied with `--fuzz=0`)
@@ -68,6 +71,8 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | `/usr/bin/omageeko-monitor-wake-kick` + user unit (omageeko-hardware) | re-wake monitors listed in `~/.config/omageeko/monitor-wake-kick` with a DPMS cycle when they reconnect after deep standby (Odyssey G9 quirk) |
 | `/usr/bin/omageeko-box` | apps from Omarchy's Arch repo in the `omageeko-arch` distrobox (`@box:` map targets) |
 | `/usr/libexec/omageeko/bt-device-privacy` + `omageeko-bt-device-privacy.{service,timer}` (omageeko-hardware) | Device Privacy Mode (flag 0x02) for bonded BLE devices, so peers advertising from their identity address (MX mice) can reconnect with ll-privacy on |
+| `/usr/share/omageeko/agents/skills/omageeko/` | agent skill: Tumbleweed-specific rules for packages, updates, boot, hardware, source; overrides the Arch parts of the omarchy skill |
+| `/usr/share/omageeko/tools/omageeko-bump` + `migrations.tsv` | the migration classifier (copied from `tools/` by prepare.sh), so omageeko-update gates migrations without a checkout |
 | `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports; `omageeko_flatpak_session_env` pushes Flatpak's export dirs into the running session after a Flatpak install (pkg-add, pkg-aur-install) |
 | `/usr/share/uwsm/env.d/20-omageeko-flatpak` (omageeko-session) | Flatpak export dirs in every session's XDG_DATA_DIRS: TW's profile.d/flatpak.sh is skipped when the login already read /etc/profile, or absent until flatpak is installed. Without it, Flatpak URL handlers (slack:// after a browser login) give "no apps available" |
 

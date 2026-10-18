@@ -1,0 +1,160 @@
+#!/bin/bash
+
+# omarchy:summary=Update omageeko: Tumbleweed, then the Omarchy layer, then apps
+# omarchy:args=[--check] [-y]
+# omarchy:requires-sudo=true
+# omageeko: replaces omarchy update. Three stages run in order and each one
+# runs even when an earlier one had nothing to do or failed:
+#   1 base      Tumbleweed snapshot (zypper dup)
+#   2 omageeko  newer Omarchy release (omageeko-bump, gated), rebuilt omageeko
+#               RPMs, then Omarchy migrations (Arch-only ones held for review)
+#   3 apps      Flatpak, the omageeko-arch box, mise tools
+# Like Aeon, updates are applied right away (snapper keeps the pre-update
+# state) and the summary says when a reboot or re-login makes them take effect.
+# Stage 2 needs the omageeko checkout: `source=` in ~/.config/omageeko/update.conf,
+# default ~/omageeko. Without it, stage 2 only runs pending migrations, still
+# gated by the classifier shipped in /usr/share/omageeko/tools.
+
+state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/omageeko
+config=${XDG_CONFIG_HOME:-$HOME/.config}/omageeko/update.conf
+source_dir=$(sed -n 's/^source=//p' "$config" 2>/dev/null)
+source_dir=${source_dir/#\~/$HOME}
+source_dir=${source_dir:-$HOME/omageeko}
+[[ -x $source_dir/tools/omageeko-bump ]] || source_dir=""
+
+declare -A result
+stages=(base omageeko apps)
+
+say() { echo -e "\e[1;34m[omageeko-update]\e[0m $*"; }
+warn() { echo -e "\e[33m[omageeko-update] $*\e[0m" >&2; }
+set_result() { result[$1]=$2; }
+
+check_only() {
+  say "Checking (nothing is changed)"
+  local snapshot
+  snapshot=$(omarchy-update-available 2>/dev/null) && echo "  base/omageeko RPMs: $snapshot" || echo "  base: up to date"
+  if [[ -n $source_dir ]]; then
+    echo "  omageeko upstream: $("$source_dir/tools/omageeko-bump" check 2>&1 | tail -1)"
+  fi
+  echo "  flatpak: $(flatpak remote-ls --updates --columns=application 2>/dev/null | wc -l) update(s)"
+  exit 0
+}
+
+[[ ${1:-} == "--check" ]] && check_only
+
+mkdir -p "$state_dir"
+log="$state_dir/update.log"
+if [[ -z ${OMAGEEKO_UPDATE_LOGGED:-} ]]; then
+  exec env OMAGEEKO_UPDATE_LOGGED=1 script -qefc "$(printf '%q ' "$0" "$@")" "$log"
+fi
+
+omarchy-update-requires-free-space || exit 1
+
+# One password prompt, kept fresh for long downloads and builds
+sudo /usr/bin/true || exit 1
+(while sleep 60; do kill -0 $$ 2>/dev/null || exit; sudo -n /usr/bin/true 2>/dev/null || exit; done) &
+keepalive=$!
+trap 'kill $keepalive 2>/dev/null' EXIT
+
+omarchy-snapshot create || (($? == 127)) || warn "Continuing without a snapshot."
+omarchy-update-stay-awake start 2>/dev/null
+
+# --- 1 base: Tumbleweed
+say "1/3 Tumbleweed"
+before=$(rpm -qa --last | head -1)
+if OMARCHY_UPDATE_UNATTENDED=1 omarchy-update-system-pkgs; then
+  [[ $(rpm -qa --last | head -1) == "$before" ]] && set_result base "up to date" || set_result base "updated"
+else
+  set_result base "FAILED (zypper needs a decision: run sudo zypper dup in a terminal)"
+fi
+
+# --- 2 omageeko: upstream release, rebuilt RPMs, migrations
+say "2/3 omageeko"
+omageeko_notes=()
+if [[ -n $source_dir ]]; then
+  bump_check=$("$source_dir/tools/omageeko-bump" check 2>&1)
+  if [[ $? == 10 ]]; then
+    say "Omarchy $bump_check, running the gated bump"
+    if "$source_dir/tools/omageeko-bump" run --apply --install >"$state_dir/bump.out" 2>&1; then
+      omageeko_notes+=("Omarchy bumped: ${bump_check%% *}")
+    else
+      omageeko_notes+=("Omarchy ${bump_check%% *} held: needs porting, see $source_dir/.bump/latest/report.md")
+    fi
+  fi
+
+  # Rebuild what the new snapshot or a source change made stale (stamps skip the rest)
+  packages=$(cd "$source_dir/packages" && ls -d */ | tr -d /)
+  if (cd "$source_dir" && bash -c "source lib/common.sh && check_builder_snapshot && build_packages $packages") \
+    >"$state_dir/build.out" 2>&1; then
+    before=$(rpm -qa 'omageeko*' --qf '%{NVR}\n' | sort | md5sum)
+    sudo zypper --non-interactive refresh omageeko-local >/dev/null
+    sudo zypper --non-interactive update --repo omageeko-local >/dev/null ||
+      omageeko_notes+=("installing rebuilt RPMs failed: sudo zypper update --repo omageeko-local")
+    # Built packages other than omageeko itself count too
+    [[ $(rpm -qa 'omageeko*' --qf '%{NVR}\n' | sort | md5sum) != "$before" ]] && omageeko_notes+=("omageeko RPMs updated")
+  else
+    omageeko_notes+=("rebuild failed: see $state_dir/build.out")
+  fi
+fi
+
+# Migrations: decisions in migrations.tsv first (skip = mark done), then hold
+# everything if an Arch-only one is still undecided
+classify=${source_dir:+$source_dir/tools/omageeko-bump}
+classify=${classify:-/usr/share/omageeko/tools/omageeko-bump}
+if [[ -x $classify ]]; then
+  pending=$("$classify" classify --json 2>/dev/null)
+  pending=${pending:-"{}"}
+  for name in $(jq -r 'to_entries[] | select(.value == "skip" or .value == "hw-noop") | .key' <<<"$pending"); do
+    touch "$HOME/.local/state/omarchy/migrations/$name"
+  done
+  held=$(jq -r 'to_entries[] | select(.value | startswith("arch:")) | .key' <<<"$pending" | tr '\n' ' ')
+fi
+if [[ -n ${held// /} ]]; then
+  omageeko_notes+=("migrations held (Arch-only, undecided): $held- see docs/bump-runbook.md#migration-arch")
+else
+  omarchy-migrate || omageeko_notes+=("a migration failed: see $log")
+fi
+omageeko-link-skills >/dev/null
+set_result omageeko "${omageeko_notes[*]:-up to date}"
+
+# --- 3 apps: Flatpak, the Arch box, mise
+say "3/3 apps"
+apps_notes=()
+if command -v flatpak >/dev/null; then
+  sudo flatpak update --system --noninteractive -y >/dev/null 2>&1 || apps_notes+=("flatpak (system) failed")
+  flatpak update --user --noninteractive -y >/dev/null 2>&1 || true
+  apps_notes+=("flatpak checked")
+fi
+if command -v omageeko-box >/dev/null && podman container exists omageeko-arch 2>/dev/null; then
+  omageeko-box update >/dev/null 2>&1 && apps_notes+=("box updated") || apps_notes+=("box update failed")
+fi
+omarchy-update-mise >/dev/null 2>&1 || apps_notes+=("mise failed")
+set_result apps "${apps_notes[*]}"
+
+omarchy-update-analyze-logs 2>/dev/null
+omarchy-shell -q omarchy.system-update clear 2>/dev/null
+omarchy-update-stay-awake stop 2>/dev/null
+
+# --- summary, Aeon style: applied now, takes effect on reboot
+reboot=""
+[[ $(ls /usr/lib/modules | sort -V | tail -1) != "$(uname -r)" ]] && reboot="new kernel"
+zypper needs-rebooting >/dev/null 2>&1
+(($? == 102)) && reboot=${reboot:-core libraries or services updated}
+echo
+say "Summary"
+for stage in "${stages[@]}"; do
+  printf '  %-9s %s\n' "$stage" "${result[$stage]}"
+done
+jq -n --arg base "${result[base]}" --arg omageeko "${result[omageeko]}" --arg apps "${result[apps]}" \
+  --arg reboot "$reboot" --arg at "$(date -Is)" \
+  '{at: $at, base: $base, omageeko: $omageeko, apps: $apps, reboot: $reboot}' >"$state_dir/last-update.json"
+
+if [[ -n $reboot ]]; then
+  echo -e "\n\e[32mUpdates applied.\e[0m Reboot to use them ($reboot)."
+  omarchy-notification-send -g  "Updates applied" "Reboot to use them ($reboot)" 2>/dev/null
+else
+  echo -e "\n\e[32mUpdates applied.\e[0m No reboot needed."
+  omarchy-notification-send -g  "Updates applied" "No reboot needed" 2>/dev/null
+fi
+grep -q FAILED <<<"${result[*]}" && exit 1
+exit 0

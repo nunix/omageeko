@@ -1,5 +1,6 @@
 repo=https://github.com/omacom/omarchy
 branch=quattro
+track=stable
 commit=84cfb93959f4fe0bbb71de71593b36647d2ba78d
 commit_date=2026-10-14T09:13:38Z
 release=v4.0.4

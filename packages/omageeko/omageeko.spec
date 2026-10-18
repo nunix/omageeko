@@ -150,6 +150,10 @@ install -Dm644 %{_sourcedir}/overlay/share/lib/pkg.sh %{buildroot}%{_datadir}/om
 install -Dm644 %{_sourcedir}/pkgmap.tsv %{buildroot}%{_datadir}/omageeko/pkgmap.tsv
 install -Dm644 %{_sourcedir}/overlay/stubs.tsv %{buildroot}%{_datadir}/omageeko/stubs.tsv
 install -Dm644 %{_sourcedir}/overlay/share/repos.tsv %{buildroot}%{_datadir}/omageeko/repos.tsv
+install -Dm755 %{_sourcedir}/omageeko-bump %{buildroot}%{_datadir}/omageeko/tools/omageeko-bump
+install -Dm644 %{_sourcedir}/migrations.tsv %{buildroot}%{_datadir}/omageeko/migrations.tsv
+mkdir -p %{buildroot}%{_datadir}/omageeko/agents/skills
+cp -a %{_sourcedir}/overlay/share/agents/skills/omageeko %{buildroot}%{_datadir}/omageeko/agents/skills/
 echo "%{commit}" > %{buildroot}%{_datadir}/omageeko/upstream-commit
 
 # ---- omageeko-settings: mirrors pkgbuilds/omarchy-settings (Tumbleweed subset)

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# omarchy:summary=Update Tumbleweed, the Omarchy layer and apps (omageeko-update)
+# omarchy:alias=omarchy up
+# omarchy:args=[-y]
+# omarchy:requires-sudo=true
+# omageeko: upstream's pacman/AUR update chain is replaced by omageeko-update's
+# three stages (Tumbleweed, omageeko, apps). -y is accepted for compatibility:
+# omageeko-update never asks before applying.
+
+[[ ${1:-} == "-y" ]] && shift
+exec omageeko-update "$@"

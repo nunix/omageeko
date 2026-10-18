@@ -1,0 +1,545 @@
+#!/usr/bin/python3 -I
+"""omageeko-bump: move the pinned Omarchy upstream forward, gated.
+
+  omageeko-bump check [--json]          is a newer upstream available? (exit 10 = yes)
+  omageeko-bump run [--to REF] [--apply] [--install] [--json]
+                                        run every gate against the candidate; --apply
+                                        writes the new pin + refreshed patches, builds,
+                                        verifies and commits; --install also installs
+  omageeko-bump ack FILE...             a replaced upstream file was reviewed/ported
+                                        against the candidate (clears replaced-drift)
+  omageeko-bump decide NAME run|skip|patched REASON
+                                        record a migration decision (clears migration-arch)
+
+Tracking (upstream.lock `track=`):
+  stable  newest release tag vX.Y.Z that CONTAINS the current pin (never downgrades)
+  edge    the head of the upstream branch (quattro)
+
+Every failure in the report names a playbook in docs/bump-runbook.md. The tool
+never edits anything outside the omageeko checkout, and without --apply it
+changes nothing at all.
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+LOCK = ROOT / "upstream.lock"
+PKG = ROOT / "packages" / "omageeko"
+WORK = ROOT / ".bump"
+CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "omageeko"
+DRIFT_BASE = PKG / "overlay" / "upstream-base.tsv"
+# Installed copy (/usr/share/omageeko/tools) only classifies, against the shipped decisions
+INSTALLED = not LOCK.exists()
+MIGRATION_DECISIONS = Path("/usr/share/omageeko/migrations.tsv") if INSTALLED else PKG / "migrations.tsv"
+RUNBOOK = "docs/bump-runbook.md"
+
+ARCH_RE = re.compile(
+    r"\b(pacman|yay|makepkg|expac|paccache|mkinitcpio|limine[a-z-]*|ufw|"
+    r"systemd-resolved|archlinux|/etc/pacman)")
+GUARD_RE = re.compile(r"(omarchy-hw-[a-z0-9-]+)((?:\s+(?!\|\||;|then)\S+)*)")
+
+
+def sh(*args, cwd=None, check=True, capture=True, env=None):
+    result = subprocess.run(args, cwd=cwd, check=False, text=True, env=env,
+                            stdout=subprocess.PIPE if capture else None,
+                            stderr=subprocess.STDOUT if capture else None)
+    if check and result.returncode != 0:
+        raise RuntimeError(f"{' '.join(map(str, args))} failed ({result.returncode}):\n{result.stdout}")
+    return result
+
+
+def read_lock():
+    lock = {}
+    for line in LOCK.read_text().splitlines():
+        if "=" in line and not line.startswith("#"):
+            key, value = line.split("=", 1)
+            lock[key.strip()] = value.strip()
+    lock.setdefault("track", "stable")
+    return lock
+
+
+def write_lock(lock):
+    order = ["repo", "branch", "track", "commit", "commit_date", "release", "pkgs_repo", "pkgs_commit"]
+    keys = order + [k for k in lock if k not in order]
+    LOCK.write_text("".join(f"{k}={lock[k]}\n" for k in keys if k in lock))
+
+
+def mirror(url, name):
+    """Blobless bare mirror with all branches and tags, refreshed on every call."""
+    path = CACHE / name
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        sh("git", "clone", "-q", "--bare", "--filter=blob:none", url, str(path))
+    sh("git", "-C", str(path), "fetch", "-q", "--prune", "--tags", "origin",
+       "+refs/heads/*:refs/heads/*")
+    return path
+
+
+def git(repo, *args, check=True):
+    return sh("git", "-C", str(repo), *args, check=check).stdout
+
+
+def is_ancestor(repo, old, new):
+    return sh("git", "-C", str(repo), "merge-base", "--is-ancestor", old, new, check=False).returncode == 0
+
+
+def candidate(lock, repo, to=None):
+    """(ref name, commit) of the upgrade target, or None."""
+    pin = lock["commit"]
+    if to:
+        commit = git(repo, "rev-parse", f"{to}^{{commit}}").strip()
+        return to, commit
+    if lock["track"] == "edge":
+        commit = git(repo, "rev-parse", f"refs/heads/{lock['branch']}").strip()
+        return (lock["branch"], commit) if commit != pin else None
+    tags = [t for t in git(repo, "tag", "--list", "v*").split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+    tags.sort(key=lambda t: [int(x) for x in t[1:].split(".")], reverse=True)
+    for tag in tags:
+        commit = git(repo, "rev-parse", f"{tag}^{{commit}}").strip()
+        if commit == pin:
+            return None
+        if is_ancestor(repo, pin, commit):
+            return tag, commit
+    return None
+
+
+def show(repo, commit, path):
+    r = sh("git", "-C", str(repo), "show", f"{commit}:{path}", check=False)
+    return r.stdout if r.returncode == 0 else None
+
+
+def files_at(repo, commit, prefix):
+    out = git(repo, "ls-tree", "-r", "--name-only", commit, "--", prefix)
+    return set(out.split())
+
+
+def checkout(repo, commit, dest):
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    p1 = subprocess.Popen(["git", "-C", str(repo), "archive", "--format=tar", commit], stdout=subprocess.PIPE)
+    subprocess.run(["tar", "-x", "-C", str(dest)], stdin=p1.stdout, check=True)
+    p1.wait()
+    if p1.returncode:
+        raise RuntimeError(f"git archive {commit} failed")
+
+
+class Report:
+    def __init__(self, current, target):
+        self.data = {"current": current, "target": target, "gates": {}, "notes": []}
+
+    def gate(self, name):
+        return self.data["gates"].setdefault(name, {"status": "green", "items": []})
+
+    def add(self, gate, level, kind, item, detail="", playbook=None):
+        g = self.gate(gate)
+        g["items"].append({"level": level, "kind": kind, "item": item, "detail": detail,
+                           "playbook": f"{RUNBOOK}#{playbook or kind}"})
+        rank = {"green": 0, "warn": 1, "red": 2}
+        if rank[level] > rank[g["status"]]:
+            g["status"] = level
+
+    @property
+    def red(self):
+        return any(g["status"] == "red" for g in self.data["gates"].values())
+
+    def write(self, directory):
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "report.json").write_text(json.dumps(self.data, indent=2) + "\n")
+        lines = [f"# omageeko-bump {self.data['current']['ref']} → {self.data['target']['ref']}", ""]
+        verdict = "RED (not applied)" if self.red else "GREEN"
+        lines += [f"Verdict: **{verdict}**", ""]
+        for name, g in self.data["gates"].items():
+            lines.append(f"## {name}: {g['status']}")
+            for i in g["items"]:
+                lines.append(f"- [{i['level']}] {i['kind']}: `{i['item']}` {i['detail']}".rstrip())
+                if i["level"] != "green":
+                    lines.append(f"  playbook: {i['playbook']}")
+            lines.append("")
+        for note in self.data["notes"]:
+            lines.append(f"- {note}")
+        (directory / "report.md").write_text("\n".join(lines) + "\n")
+        latest = WORK / "latest"
+        if latest.is_symlink() or latest.exists():
+            latest.unlink()
+        latest.symlink_to(directory.name)
+
+
+def patch_targets(patch_text):
+    return [m.group(1) for m in re.finditer(r"^\+\+\+ b/(\S+)", patch_text, re.M)]
+
+
+def gate_patches(report, repo, pin, target, tree, refreshed_dir):
+    """Apply each patch at fuzz 0; if it fails, 3-way merge old-patched onto new upstream."""
+    refreshed_dir.mkdir(parents=True, exist_ok=True)
+    for patch in sorted((PKG / "patches").glob("*.patch")):
+        text = patch.read_text()
+        r = sh("git", "apply", "--check", "-p1", str(patch), cwd=tree, check=False)
+        if r.returncode == 0:
+            sh("git", "apply", "-p1", str(patch), cwd=tree)
+            report.add("patches", "green", "applies", patch.name)
+            continue
+        new_patch, conflicts = [], []
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            paths = patch_targets(text)
+            for path in paths:
+                old = show(repo, pin, path)
+                if old is None or show(repo, target, path) is None:
+                    conflicts.append(f"{path}: {'removed' if old is not None else 'new'} upstream")
+                    continue
+                (t / "a" / path).parent.mkdir(parents=True, exist_ok=True)
+                (t / "a" / path).write_text(old)
+            if not conflicts:
+                ok = sh("git", "apply", "-p1", "--directory", "a", str(patch), cwd=t, check=False)
+                if ok.returncode:
+                    conflicts.append("patch no longer applies to its own base: " + ok.stdout.strip()[:200])
+            for path in paths if not conflicts else []:
+                old, new = show(repo, pin, path), show(repo, target, path)
+                mine = (t / "a" / path).read_text()
+                if mine == old:
+                    conflicts.append(f"{path}: patch made no change to its base (tool error)")
+                    continue
+                for name, content in (("mine", mine), ("base", old), ("theirs", new)):
+                    (t / name).write_text(content)
+                merge = sh("git", "merge-file", "-p", str(t / "theirs"), str(t / "base"), str(t / "mine"),
+                           check=False)
+                if merge.returncode != 0:
+                    conflicts.append(f"{path}: 3-way merge conflict")
+                    (refreshed_dir / (patch.stem + ".conflict")).write_text(merge.stdout)
+                    continue
+                (t / "merged").write_text(merge.stdout)
+                d = sh("diff", "-u", "--label", f"a/{path}", "--label", f"b/{path}",
+                       str(t / "theirs"), str(t / "merged"), check=False).stdout
+                if not d.strip():
+                    conflicts.append(f"{path}: upstream now contains the change; drop the patch")
+                    continue
+                new_patch.append(d)
+        if not conflicts:
+            refreshed = "".join(new_patch)
+            (refreshed_dir / patch.name).write_text(refreshed)
+            ok = sh("git", "apply", "-p1", str(refreshed_dir / patch.name), cwd=tree, check=False)
+            if ok.returncode:
+                conflicts.append("refreshed patch does not apply (tool error): " + ok.stdout.strip()[:200])
+        if conflicts:
+            report.add("patches", "red", "patch-conflict", patch.name, "; ".join(conflicts))
+        else:
+            report.add("patches", "green", "refreshed", patch.name, "3-way merged onto the new upstream")
+
+
+def drift_bases(pin):
+    bases = {}
+    if DRIFT_BASE.exists():
+        for line in DRIFT_BASE.read_text().splitlines():
+            if line.strip() and not line.startswith("#"):
+                path, commit = line.split("\t")[:2]
+                bases[path] = commit
+    return bases
+
+
+def replaced_files():
+    names = {f"bin/{p.name}" for p in (PKG / "overlay" / "bin").iterdir()}
+    stubs = PKG / "overlay" / "stubs.tsv"
+    for line in stubs.read_text().splitlines():
+        if line.strip() and not line.startswith("#"):
+            names.add(f"bin/{line.split()[0]}")
+    return sorted(names)
+
+
+def gate_drift(report, repo, pin, target, drift_dir):
+    bases = drift_bases(pin)
+    drift_dir.mkdir(parents=True, exist_ok=True)
+    for path in replaced_files():
+        base = bases.get(path, pin)
+        old, new = show(repo, base, path), show(repo, target, path)
+        if old is None and new is None:
+            continue  # omageeko-only command
+        if old == new:
+            continue
+        name = path.replace("/", "_")
+        if new is None:
+            report.add("replaced-files", "warn", "replaced-removed", path,
+                       "upstream deleted the file omageeko replaces; drop the overlay copy if unused")
+            continue
+        if old is None:
+            (drift_dir / f"{name}.new").write_text(new)
+            report.add("replaced-files", "red", "replaced-collision", path,
+                       f"upstream added a command with an omageeko overlay name; see drift/{name}.new")
+            continue
+        d = git(repo, "diff", f"{base}:{path}", f"{target}:{path}", check=False)
+        (drift_dir / f"{name}.diff").write_text(d)
+        report.add("replaced-files", "red", "replaced-drift", path,
+                   f"upstream changed it ({base[:8]}..{target[:8]}); see drift/{name}.diff")
+
+
+def gate_menu(report, tree):
+    r = sh(sys.executable, "-I", str(PKG / "menu-transform.py"), cwd=tree, check=False)
+    if r.returncode:
+        report.add("menu", "red", "menu-drift", "menu-transform.py", r.stdout.strip().splitlines()[-1] if r.stdout else "")
+    else:
+        report.add("menu", "green", "applies", "menu-transform.py", r.stdout.strip())
+
+
+def migration_decisions():
+    decisions = {}
+    if MIGRATION_DECISIONS.exists():
+        for line in MIGRATION_DECISIONS.read_text().splitlines():
+            if line.strip() and not line.startswith("#"):
+                parts = line.split("\t")
+                decisions[parts[0]] = parts[1]
+    return decisions
+
+
+def classify_migration(text, bin_dir):
+    """portable | hw-noop (guard excludes this machine) | arch:<hits>"""
+    code = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("#"))
+    hits = sorted(set(m.group(1) for m in ARCH_RE.finditer(code)))
+    if not hits:
+        return "portable"
+    head = "\n".join(code.splitlines()[:30])
+    for m in GUARD_RE.finditer(head):
+        after = head[m.end():m.end() + 80]
+        before = head[max(0, m.start() - 12):m.start()]
+        negated = "!" in before
+        if not re.search(r"(\|\|\s*exit 0|then\s*\n?\s*exit 0)", after):
+            continue
+        cmd = [str(bin_dir / m.group(1))] + m.group(2).replace('"', "").split()
+        if not Path(cmd[0]).exists():
+            continue
+        matched = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                 env={**os.environ, "OMARCHY_PATH": str(bin_dir.parent)}).returncode == 0
+        uses_or = "||" in after.split("\n")[0]
+        # `hw || exit 0` and `if ! hw; then exit 0` both exit when the hardware doesn't match
+        if (uses_or or negated) and not matched:
+            return "hw-noop"
+    return "arch:" + " ".join(hits)
+
+
+def classify_migrations(names, migrations_dir, bin_dir):
+    decisions = migration_decisions()
+    result = {}
+    for name in names:
+        text = (migrations_dir / name).read_text()
+        result[name] = decisions.get(name) or classify_migration(text, bin_dir)
+    return result
+
+
+def gate_migrations(report, repo, pin, target, tree):
+    new = sorted(files_at(repo, target, "migrations") - files_at(repo, pin, "migrations"))
+    classes = classify_migrations([Path(n).name for n in new], tree / "migrations", tree / "bin")
+    for name, cls in classes.items():
+        if cls.startswith("arch:"):
+            report.add("migrations", "red", "migration-arch", name, cls[5:])
+        else:
+            report.add("migrations", "green", cls, name)
+
+
+def mapped_names():
+    names = set()
+    for line in (ROOT / "packages.map").read_text().splitlines():
+        if line.strip() and not line.startswith("#"):
+            names.add(line.split()[0].lstrip("+"))
+    return names
+
+
+def gate_packages(report, repo, pin, target):
+    added = set()
+    diff = git(repo, "diff", pin, target, "--", "install", "migrations", "bin", check=False)
+    in_list = False
+    for line in diff.splitlines():
+        if line.startswith("+++ b/"):
+            in_list = line.endswith(".packages")
+        elif line.startswith("+") and not line.startswith("+++"):
+            body = line[1:].strip()
+            if in_list and re.fullmatch(r"[a-z0-9][a-z0-9._+-]*", body):
+                added.add(body)
+            for m in re.finditer(r"omarchy-pkg-(?:add|aur-add|missing|present)\s+([a-z0-9 ._+-]+)", body):
+                added.update(w for w in m.group(1).split() if not w.startswith("-"))
+    mapped = mapped_names()
+    for name in sorted(added - mapped):
+        r = sh("zypper", "--no-refresh", "-q", "search", "-x", "--match-exact", name, check=False)
+        if r.returncode == 0 and re.search(rf"\|\s*{re.escape(name)}\s*\|", r.stdout):
+            report.add("packages", "green", "same-name", name, "exists on Tumbleweed under the Arch name")
+        else:
+            report.add("packages", "red", "package-unmapped", name, "not on Tumbleweed under this name")
+
+
+def gate_pkgbuilds(report, lock, target_date):
+    if "pkgs_repo" not in lock:
+        return None
+    repo = mirror(lock["pkgs_repo"], "omarchy-pkgs.git")
+    head = git(repo, "symbolic-ref", "HEAD").strip()
+    new = git(repo, "rev-list", "-1", f"--before={target_date}", head).strip()
+    old = lock.get("pkgs_commit", new)
+    built = []
+    for line in (ROOT / "packages.map").read_text().splitlines():
+        parts = line.split()
+        if len(parts) >= 3 and parts[2].startswith("@build"):
+            built.append(parts[0].lstrip("+"))
+    changed = set()
+    for path in git(repo, "diff", "--name-only", old, new, check=False).split():
+        top = path.split("/")
+        for name in built:
+            if name in top:
+                changed.add(name)
+    for name in sorted(changed):
+        report.add("pkgbuilds", "warn", "pkgbuild-changed", name,
+                   f"omarchy-pkgs changed its recipe ({old[:8]}..{new[:8]}); port version bumps to packages/")
+    return new
+
+
+def build_and_verify(report):
+    """Build in the container, then verify the user's Hyprland config against the built tree."""
+    r = sh("bash", "-c", "source lib/common.sh; check_builder_snapshot && build_packages omageeko",
+           cwd=ROOT, check=False)
+    if r.returncode:
+        report.add("build", "red", "build-failed", "omageeko", r.stdout.strip().splitlines()[-1] if r.stdout else "")
+        (WORK / "build.log").write_text(r.stdout)
+        return False
+    rpms = sorted(Path("/var/lib/omageeko/repo").glob("**/omageeko-[0-9]*.noarch.rpm"), key=os.path.getmtime)
+    with tempfile.TemporaryDirectory() as tmp:
+        p1 = subprocess.Popen(["rpm2cpio", str(rpms[-1])], stdout=subprocess.PIPE)
+        subprocess.run(["cpio", "-idm", "--quiet"], stdin=p1.stdout, cwd=tmp, check=True)
+        p1.wait()
+        tree = Path(tmp) / "usr/share/omarchy"
+        wrapper = Path(tmp) / "wrap.lua"
+        wrapper.write_text(f'hl.timer = function() end\ndofile("{Path.home()}/.config/hypr/hyprland.lua")\n')
+        v = sh("Hyprland", "--verify-config", "-c", str(wrapper), check=False,
+               env={**os.environ, "OMARCHY_PATH": str(tree)})
+        if v.returncode or "config ok" not in v.stdout:
+            tail = v.stdout.split("parsing result")[-1].strip().splitlines()[1:4]
+            report.add("build", "red", "verify-config", "hyprland.lua", " ".join(tail))
+            return False
+    report.add("build", "green", "built", Path(rpms[-1]).name)
+    report.add("build", "green", "verify-config", "hyprland.lua", "config ok against the new tree")
+    return True
+
+
+def cmd_check(args):
+    lock = read_lock()
+    repo = mirror(lock["repo"], "omarchy.git")
+    c = candidate(lock, repo)
+    out = {"track": lock["track"], "current": lock.get("release") or lock["commit"][:12],
+           "current_commit": lock["commit"], "available": bool(c),
+           "target": c[0] if c else None, "target_commit": c[1] if c else None}
+    if not c and lock["track"] == "stable":
+        out["note"] = "no release contains the current pin yet; holding until the next one"
+    print(json.dumps(out) if "--json" in args else
+          (f"{out['target']} available ({out['target_commit'][:12]})" if c else
+           f"up to date ({out['current']}, track={lock['track']}){'; ' + out['note'] if 'note' in out else ''}"))
+    return 10 if c else 0
+
+
+def cmd_run(args):
+    lock = read_lock()
+    repo = mirror(lock["repo"], "omarchy.git")
+    to = args[args.index("--to") + 1] if "--to" in args else None
+    c = candidate(lock, repo, to)
+    if not c:
+        print("Nothing to bump.")
+        return 0
+    ref, target = c
+    pin = lock["commit"]
+    target_date = git(repo, "log", "-1", "--format=%cI", target).strip()
+    out = WORK / ref.replace("/", "_")
+    report = Report({"ref": lock.get("release") or pin[:12], "commit": pin},
+                    {"ref": ref, "commit": target, "date": target_date})
+    if out.exists():
+        shutil.rmtree(out)
+    tree = out / "tree"
+    checkout(repo, target, tree)
+    gate_patches(report, repo, pin, target, tree, out / "patches")
+    gate_drift(report, repo, pin, target, out / "drift")
+    gate_menu(report, tree)
+    gate_migrations(report, repo, pin, target, tree)
+    gate_packages(report, repo, pin, target)
+    pkgs_commit = gate_pkgbuilds(report, lock, target_date)
+
+    applied = False
+    if "--apply" in args and not report.red:
+        saved = {p: p.read_text() for p in [LOCK, *(PKG / "patches").glob("*.patch")]}
+        for p in (out / "patches").glob("*.patch"):
+            (PKG / "patches" / p.name).write_text(p.read_text())
+        lock.update(commit=target, commit_date=target_date, release=ref if ref.startswith("v") else lock.get("release", ""))
+        if pkgs_commit:
+            lock["pkgs_commit"] = pkgs_commit
+        write_lock(lock)
+        if build_and_verify(report):
+            sh("git", "add", "-A", "upstream.lock", "packages/omageeko", cwd=ROOT)
+            sh("git", "commit", "-q", "-m", f"Bump upstream Omarchy to {ref} (omageeko-bump)\n\n"
+               f"{pin[:12]} -> {target[:12]}. Report: .bump/{out.name}/report.md", cwd=ROOT)
+            applied = True
+            if "--install" in args:
+                sh("sudo", "zypper", "--non-interactive", "refresh", "omageeko-local")
+                r = sh("sudo", "zypper", "--non-interactive", "update", "--repo", "omageeko-local", check=False)
+                report.data["notes"].append("installed" if r.returncode == 0 else f"install failed: {r.stdout[-300:]}")
+        else:
+            for p, text in saved.items():
+                p.write_text(text)
+            report.data["notes"].append("build/verify failed: pin and patches restored")
+    report.data["applied"] = applied
+    report.write(out)
+    if "--json" in args:
+        print(json.dumps(report.data))
+    else:
+        print((out / "report.md").read_text())
+    return 0 if not report.red and (applied or "--apply" not in args) else 1
+
+
+def cmd_ack(args):
+    latest = WORK / "latest" / "report.json"
+    target = json.loads(latest.read_text())["target"]["commit"]
+    bases = drift_bases(None)
+    for path in args:
+        bases[path if path.startswith("bin/") else f"bin/{path}"] = target
+    DRIFT_BASE.write_text("# upstream file <TAB> upstream commit its omageeko replacement was last reviewed against\n"
+                          + "".join(f"{p}\t{c}\n" for p, c in sorted(bases.items())))
+    print(f"acknowledged {len(args)} file(s) at {target[:12]}")
+    return 0
+
+
+def cmd_decide(args):
+    name, decision, reason = args[0], args[1], " ".join(args[2:])
+    if decision not in ("run", "skip", "patched"):
+        raise SystemExit("decision must be run, skip or patched")
+    lines = MIGRATION_DECISIONS.read_text().splitlines() if MIGRATION_DECISIONS.exists() else \
+        ["# migration <TAB> run|skip|patched <TAB> reason (omageeko-bump decide)"]
+    lines = [l for l in lines if not l.startswith(name + "\t")] + [f"{name}\t{decision}\t{reason}"]
+    MIGRATION_DECISIONS.write_text("\n".join(lines) + "\n")
+    print(f"{name}: {decision}")
+    return 0
+
+
+def cmd_classify(args):
+    """Pending migrations for this user, classified (used by omageeko-update)."""
+    omarchy = Path(os.environ.get("OMARCHY_PATH", "/usr/share/omarchy"))
+    done = Path.home() / ".local/state/omarchy/migrations"
+    pending = sorted(p.name for p in (omarchy / "migrations").glob("*.sh") if not (done / p.name).exists())
+    classes = classify_migrations(pending, omarchy / "migrations", omarchy / "bin")
+    print(json.dumps(classes) if "--json" in args else
+          "\n".join(f"{c:10} {n}" for n, c in classes.items()) or "nothing pending")
+    return 1 if any(c.startswith("arch:") for c in classes.values()) else 0
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0
+    commands = {"check": cmd_check, "run": cmd_run, "ack": cmd_ack, "decide": cmd_decide,
+                "classify": cmd_classify}
+    if INSTALLED and argv[0] != "classify":
+        raise SystemExit("installed copy: only `classify` works; run the omageeko checkout's tools/omageeko-bump")
+    if argv[0] not in commands:
+        print(__doc__, file=sys.stderr)
+        return 2
+    return commands[argv[0]](argv[1:])
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

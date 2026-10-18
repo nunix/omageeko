@@ -20,6 +20,7 @@ build_packages omageeko
 snap_begin "03-omarchy-core"
 install_local_rpms omageeko omageeko-settings
 fc-cache -f >/dev/null
+omageeko-link-skills
 snap_end
 
 log "Layer 03 done. Run layers/03-omarchy-core/verify.sh"

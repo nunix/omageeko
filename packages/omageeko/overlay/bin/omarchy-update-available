@@ -20,10 +20,10 @@ if [[ $OMARCHY_PATH != "/usr/share/omarchy" ]]; then
   fi
 fi
 
-# The published Tumbleweed snapshot, e.g. "openSUSE 20261015-0"
+# The published Tumbleweed snapshot: the file reads "/ openSUSE 20261016-1"
 installed=$(. /etc/os-release && echo "${VERSION_ID:-0}")
 published=$(timeout 10 curl -fsSL https://download.opensuse.org/tumbleweed/repo/oss/media.1/products 2>/dev/null |
-  awk '{ print $2 }' | cut -d- -f1 || true)
+  awk '{ print $NF }' | cut -d- -f1 || true)
 if [[ $published =~ ^[0-9]{8}$ ]] && (( published > installed )); then
   updates+=("tumbleweed $installed -> $published")
 fi

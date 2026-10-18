@@ -13,6 +13,7 @@ packages/<name>/       RPM spec (+ patches, rebuild-on) for software missing on 
 packages/omageeko/     the Omarchy port itself: omageeko.spec, patches/, overlay/ (bin replacements,
                        stubs.tsv, INDEX.md = everything omageeko changes upstream)
 hosts/<dmi-product>/   machine-specific files (home/ is copied into $HOME by layer 05)
+tools/omageeko-bump    gated upstream bump (check, run, ack, decide); red reports → docs/bump-runbook.md
 docs/                  feature docs (touchpad-and-mouse.md, desk-workspaces.md, iphone-tethering.md)
 archive/omaweed/       the retired omaweed branch (installers, diff) and what was ported from it
 lib/common.sh          shared helpers for layer scripts

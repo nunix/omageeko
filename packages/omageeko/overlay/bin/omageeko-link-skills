@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# omarchy:summary=Link the omageeko agent skill into every agent's skills directory
+# omarchy:hidden=true
+# omageeko: same places Omarchy links its own skills (omarchy-provision-user),
+# plus opencode's. A skill of the user's own by that name is left in place.
+# Run by layer 03 and omageeko-update; safe to rerun.
+
+skill=/usr/share/omageeko/agents/skills/omageeko
+[[ -d $skill ]] || exit 0
+
+link_skill() {
+  mkdir -p "$1"
+  if [[ -e $1/omageeko && ! -L $1/omageeko ]]; then
+    echo "Leaving your own $1/omageeko in place"
+  else
+    ln -sfn "$skill" "$1/omageeko"
+  fi
+}
+
+for skills_dir in ~/.agents/skills ~/.claude/skills ~/.codex/skills ~/.pi/agent/skills ~/.gemini/config/skills \
+  ~/.hermes/skills ~/.config/opencode/skills; do
+  # Only for agents that are set up (the parent dir exists), like Omarchy's own skills
+  [[ -d $(dirname "$skills_dir") ]] && link_skill "$skills_dir"
+done
+exit 0

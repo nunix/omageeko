@@ -2,3 +2,6 @@ upstream/
 *.rpm
 /build/
 packages/omageeko/pkgmap.tsv
+.bump/
+packages/omageeko/omageeko-bump
+__pycache__/

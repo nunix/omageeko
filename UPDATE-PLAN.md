@@ -94,7 +94,15 @@ With a remote repo, a CI job runs `omageeko-bump` on each upstream tag and opens
 | B | `omageeko-bump` with gates 1–8, improved migration and package audits; first real bump: v4.0.4 → v4.0.5 (fix remove-preinstalls, review 6 replaced files, #15655 vs host workspaces) | medium |
 | C | remote repo (OBS or GH Actions) + CI bump bot → two-stage update | medium, needs a hosting decision |
 
-## Decisions needed
+## Decisions (2026-10-18)
+
+1. **Track releases, never downgrade.** Omarchy cuts releases on maintenance branches (`v4-0-5` forked from quattro on 2026-08-14), so the Oct 14 quattro pin is ~945 commits ahead of v4.0.5. Moving to v4.0.5 would mean 7 of 18 patches failing, the menu transform failing and 51 already-run migrations missing. `track=stable` therefore takes only a release tag that *contains* the pin. It holds until the next release is cut from quattro (expected v4.1.0), then follows that line. `track=edge` follows quattro with the same gates.
+2. **Apply automatically, Aeon style.** `omageeko-update` applies all three stages and ends with "Updates applied", plus "Reboot to use them" when the kernel or core libraries changed. Snapper keeps the pre-update state. A green bump auto-installs; a red one is held and reported.
+3. **Local-AI friendly bump.** `tools/omageeko-bump` is deterministic and writes `.bump/<target>/report.{json,md}`. Every red item names a section of `docs/bump-runbook.md`, written so a local model (ollama-vulkan + opencode, both packaged in TW) can resolve it, with explicit hand-over rules.
+4. **Agent skill.** No openSUSE/Tumbleweed system skill exists (searched GitHub: only project-specific zypper/OBS skills). omageeko ships its own (`/usr/share/omageeko/agents/skills/omageeko`), linked next to Omarchy's skills.
+5. Phase C hosting: not decided; builds stay local for now.
+
+### Original questions
 
 1. Track release tags (recommended) or quattro HEAD.
 2. Stage 2b: auto-install a fully green bump, or always just notify and let you run it.
