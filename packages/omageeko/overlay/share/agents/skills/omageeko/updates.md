@@ -2,7 +2,7 @@
 
 ## omageeko-update
 
-`omarchy update` (menu Update › Omarchy, the bar's update widget) runs `omageeko-update`. It applies updates right away, the way Aeon does, and ends with "Updates applied", plus "Reboot to use them" when the kernel or core libraries changed. Three stages; each one runs even if an earlier one had nothing to do or failed:
+`omarchy update` (menu Update › Omageeko, the bar's update widget) runs `omageeko-update`. It applies updates right away, the way Aeon does, and ends with "Updates applied", plus "Reboot to use them" when the kernel or core libraries changed. Three stages; each one runs even if an earlier one had nothing to do or failed:
 
 | Stage | Does |
 |---|---|
@@ -12,7 +12,7 @@
 
 - `omageeko-update --check` lists what's pending and changes nothing.
 - The log is in `~/.local/state/omageeko/update.log`; the last result is in `~/.local/state/omageeko/last-update.json`.
-- Stage 2 needs the checkout at `~/omageeko` (or `source=` in `~/.config/omageeko/update.conf`). Without it, stage 2 only runs migrations.
+- Stage 2 needs the checkout at `~/omageeko` (or `source=` in `~/.config/omageeko/update.conf`). Without it, stage 2 skips the bump and rebuild but still updates mise, its tools and runs migrations.
 
 ## Migrations
 
