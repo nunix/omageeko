@@ -13,7 +13,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-pkg-install | fzf over `zypper search --uninstalled-only` |
 | omarchy-pkg-remove | fzf over zypper's user-installed set (≈ `pacman -Qqe`) |
 | omarchy-pkg-aur-install | fzf over Flathub apps |
-| omarchy-update-pacman | `zypper` in a PID 1 scope (args are zypper args) |
+| omarchy-update-pacman | `zypper` in a PID 1 scope (args are zypper args); passes `DISABLE_SNAPPER_ZYPP_PLUGIN` through sudo |
 | omarchy-update-system-pkgs | `zypper refresh` + `zypper dup` (restricted with `--from` to `OMAGEEKO_DUP_FROM` when omageeko-update passes the Tumbleweed repos); interactive retry on solver questions |
 | omarchy-update-system-pkgs-when-conflicted | re-runs update-system-pkgs |
 | omarchy-update-pkg-prune | `zypper clean` (packages only) |
@@ -37,7 +37,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-update | thin wrapper: `exec omageeko-update` (upstream's pacman/AUR chain doesn't apply; `-y` accepted) |
 | omageeko-update (new) | three stages, each runs regardless of the previous: Tumbleweed (`zypper dup` from openSUSE/Packman repos) → omageeko (gated upstream bump, rebuilt RPMs, mise + `mise up`, gated migrations) → apps (vendor repos, Flatpak, box); applies right away and reports reboot need (Aeon style). See `UPDATE-PLAN.md` |
 | omageeko-link-skills (new) | links `/usr/share/omageeko/agents/skills/omageeko` into the agent skill dirs Omarchy uses (+ opencode) |
-| omarchy-snapshot | create: snapper (all configs). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
+| omarchy-snapshot | create: snapper (all configs), no inline `cleanup` (left to snapper-cleanup.timer; inline it waited on btrfs quotas). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
 
 ## Patches (`patches/`, applied with `--fuzz=0`)
 

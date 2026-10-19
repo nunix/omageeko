@@ -17,5 +17,9 @@ env_args=(OMARCHY_UPDATE_PACMAN=1)
 if [[ -n ${LC_ALL:-} ]]; then
   env_args+=(LC_ALL="$LC_ALL")
 fi
+# omageeko-update takes one snapshot pair for its whole run
+if [[ -n ${DISABLE_SNAPPER_ZYPP_PLUGIN:-} ]]; then
+  env_args+=(DISABLE_SNAPPER_ZYPP_PLUGIN=1)
+fi
 
 exec sudo env "${env_args[@]}" "${scope[@]}" zypper "$@"

@@ -34,7 +34,8 @@ create)
 
   for config in "${CONFIGS[@]}"; do
     sudo snapper -c "$config" create -c number -d "omarchy: $DESC"
-    sudo snapper -c "$config" cleanup number
+    # Pruning is left to snapper-cleanup.timer: run inline it waits on btrfs
+    # quota accounting and deletes boot entries, which made this step slow
   done
 
   echo "Snapshots can be selected during boot."

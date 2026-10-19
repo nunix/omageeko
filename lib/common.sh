@@ -23,6 +23,16 @@ require_user() {
 }
 
 # zypper_install pkg... : installs only what is missing
+# zypper as root; inside a layer's snapshot pair (snap_begin), skip the snapper
+# plugin's own pre/post pair, which would only nest inside the layer's
+layer_zypper() {
+  if [[ -n $SNAP_PRE ]]; then
+    sudo env DISABLE_SNAPPER_ZYPP_PLUGIN=1 zypper "$@"
+  else
+    sudo zypper "$@"
+  fi
+}
+
 zypper_install() {
   local missing=()
   for pkg in "$@"; do
@@ -30,7 +40,7 @@ zypper_install() {
   done
   if (( ${#missing[@]} )); then
     log "Installing: ${missing[*]}"
-    sudo zypper --non-interactive install --no-recommends "${missing[@]}"
+    layer_zypper --non-interactive install --no-recommends "${missing[@]}"
   fi
 }
 
@@ -196,6 +206,6 @@ build_packages() {
 
 # install_local_rpms rpm... : install or upgrade to the newest omageeko-local builds
 install_local_rpms() {
-  sudo zypper --non-interactive refresh "$OMAGEEKO_REPO_ALIAS" >/dev/null
-  sudo zypper --non-interactive install --no-recommends --from "$OMAGEEKO_REPO_ALIAS" "$@"
+  layer_zypper --non-interactive refresh "$OMAGEEKO_REPO_ALIAS" >/dev/null
+  layer_zypper --non-interactive install --no-recommends --from "$OMAGEEKO_REPO_ALIAS" "$@"
 }

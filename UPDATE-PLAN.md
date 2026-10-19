@@ -94,6 +94,12 @@ With a remote repo, a CI job runs `omageeko-bump` on each upstream tag and opens
 | B | `omageeko-bump` with gates 1–8, improved migration and package audits; first real bump: v4.0.4 → v4.0.5 (fix remove-preinstalls, review 6 replaced files, #15655 vs host workspaces) | medium |
 | C | remote repo (OBS or GH Actions) + CI bump bot → two-stage update | medium, needs a hosting decision |
 
+## Snapshots (2026-10-19)
+
+Learned from Aeon/MicroOS: `transactional-update` makes one snapshot per update and `--drop-if-no-change` discards it when nothing changed, with pruning left to snapper's timers. `omageeko-update` now takes one pre/post pair for the whole run, with the zypp plugin's per-transaction pairs disabled. It drops the pre snapshot when no package changed, and never prunes inline. Before this, each run added a `single` snapshot plus a pre/post pair per zypper call, each with one boot entry per kernel (71 entries on 2026-10-19), and the inline `snapper cleanup` waited on btrfs quota accounting.
+
+What omageeko doesn't take from Aeon: updating into a new read-only snapshot that only becomes active on reboot. That needs a read-only root (transactional-update); classic Tumbleweed applies updates live, with the pre snapshot as the rollback point.
+
 ## Repos by stage (2026-10-18)
 
 Stage 1 `zypper dup --from` the Tumbleweed repos (openSUSE distribution repos, codecs, Packman, classified by URL). Stage 2 updates `omageeko-local` and `mise`, then `mise up`: mise is Omarchy's installer for its default tools and runtimes, so it belongs to the Omarchy layer (layer 03 installs it with `base-devel` and the `-devel` headers mise builds against). Stage 3 updates every other repo (vendor apps, OBS add-ons), Flatpak and the box.

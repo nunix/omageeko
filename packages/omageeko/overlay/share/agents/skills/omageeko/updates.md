@@ -25,9 +25,16 @@ Omarchy ships one-shot migrations, run per user by `omarchy-migrate` and recorde
 
 ## Snapshots and rollback
 
-- `omageeko-update` takes a snapper snapshot first, and every zypper transaction adds its own pre/post pair. `/home` (XFS) is not snapshotted.
+- `omageeko-update` works like Aeon's `transactional-update --drop-if-no-change`:
+  - one `pre` snapshot ("omageeko-update") before stage 1;
+  - the snapper zypp plugin's per-transaction pairs are disabled for the run (`DISABLE_SNAPPER_ZYPP_PLUGIN=1`, passed through sudo by `omarchy-update-pacman` and `zyp`);
+  - at the end: no package changed → the snapshot is deleted (no new boot entries); otherwise a `post` ("omageeko-update: N packages") closes the pair, marked `important=yes` when a kernel changed.
+- Layer scripts take one pair per layer (`snap_begin`/`snap_end`); zypper calls inside them skip the plugin's nested pair (`layer_zypper`).
+- Pruning is left to `snapper-cleanup.timer` (daily; NUMBER_LIMIT 2-10, important 4-10). Running `snapper cleanup` inline waits on btrfs quota accounting, which is why it was taken out of the update path.
+- Every snapshot gets a systemd-boot entry per installed kernel (sdbootutil's snapper plugin), so fewer snapshots means a shorter boot menu.
+- `/home` (XFS) and `/var` (Flatpak, containers) are not in root snapshots.
 - To roll back the OS:
-  1. reboot and pick an older snapshot entry in the systemd-boot menu;
+  1. reboot and pick the pre-update snapshot entry in the systemd-boot menu;
   2. once it works, make it permanent with `sudo snapper rollback`, then reboot.
 - `omarchy snapshot restore` walks through the same steps.
 - Inspect what changed: `snapper list`, `snapper status <pre>..<post>`, `snapper diff <pre>..<post> <file>`.

@@ -476,8 +476,8 @@ def cmd_run(args):
                f"{pin[:12]} -> {target[:12]}. Report: .bump/{out.name}/report.md", cwd=ROOT)
             applied = True
             if "--install" in args:
-                sh("sudo", "zypper", "--non-interactive", "refresh", "omageeko-local")
-                r = sh("sudo", "zypper", "--non-interactive", "update", "--repo", "omageeko-local", check=False)
+                sh("sudo", "env", "DISABLE_SNAPPER_ZYPP_PLUGIN=1", "zypper", "--non-interactive", "refresh", "omageeko-local")
+                r = sh("sudo", "env", "DISABLE_SNAPPER_ZYPP_PLUGIN=1", "zypper", "--non-interactive", "update", "--repo", "omageeko-local", check=False)
                 report.data["notes"].append("installed" if r.returncode == 0 else f"install failed: {r.stdout[-300:]}")
         else:
             for p, text in saved.items():
