@@ -39,3 +39,7 @@ o.bind("mouse_right", "Next workspace (carousel)", "omarchy-hyprland-workspace-c
 -- these keys; Super + Alt + Tab and Super + Alt + wheel still cycle a group.
 o.rebind("SUPER + CTRL + LEFT", "Swap columns", "omarchy-hyprland-window-swap-columns left")
 o.rebind("SUPER + CTRL + RIGHT", "Swap columns", "omarchy-hyprland-window-swap-columns right")
+
+-- omageeko (21K6S0A00C): screenshot like Trigger › Capture › Screenshot (and PRINT):
+-- drag a rectangle (or snap to a window), then copy/save/edit
+o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
