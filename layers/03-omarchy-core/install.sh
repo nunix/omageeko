@@ -10,6 +10,10 @@ source "$(dirname "$(readlink -f "$0")")/../../lib/common.sh"
 
 require_user
 
+# Snapper: at most 5 normal and 5 important number snapshots (each one adds a
+# boot entry per kernel; data lives remotely, snapshots only guard the system)
+SNAPSHOT_LIMIT=5
+
 MISE_REPO_ALIAS="mise"
 MISE_REPO_URL="https://mise.jdx.dev/rpm"
 MISE_GPG_KEY="https://mise.jdx.dev/gpg-key.pub"
@@ -22,6 +26,10 @@ check_builder_snapshot
 build_packages omageeko
 
 snap_begin "03-omarchy-core"
+
+if sudo snapper list-configs 2>/dev/null | grep -q '^root '; then
+  sudo snapper -c root set-config NUMBER_LIMIT=$SNAPSHOT_LIMIT NUMBER_LIMIT_IMPORTANT=$SNAPSHOT_LIMIT
+fi
 
 # mise is Omarchy's installer for its default CLI tools and language runtimes
 # (omarchy-mise-install, omarchy-install-dev-env, agent account wrappers), so it

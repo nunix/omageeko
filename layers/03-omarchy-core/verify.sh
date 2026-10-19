@@ -20,6 +20,7 @@ check "shell tree (/usr/share/omarchy/shell/shell.qml)" test -f /usr/share/omarc
 check "hypr defaults (default/hypr/bootstrap.lua)" test -f /usr/share/omarchy/default/hypr/bootstrap.lua
 check "themes present" test -d /usr/share/omarchy/themes
 check "mise installed (Omarchy layer)" command -v mise
+check "snapper keeps at most 5 + 5 number snapshots" bash -c 'sudo snapper -c root get-config | grep -Eq "NUMBER_LIMIT +│ 5$" && sudo snapper -c root get-config | grep -Eq "NUMBER_LIMIT_IMPORTANT +│ 5$"'
 check "mise repo enabled" zypper --no-refresh lr mise
 check "base-devel + mise build headers (map_packages 03)" rpm -q $(map_packages 03)
 check "skel user config (hypr/hyprland.lua)" test -f /etc/skel/.config/hypr/hyprland.lua
