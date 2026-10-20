@@ -37,6 +37,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-update | thin wrapper: `exec omageeko-update` (upstream's pacman/AUR chain doesn't apply; `-y` accepted) |
 | omageeko-update (new) | three stages, each runs regardless of the previous: Tumbleweed (`zypper dup` from openSUSE/Packman repos) → omageeko (gated upstream bump, rebuilt RPMs, mise + `mise up`, gated migrations) → apps (vendor repos, Flatpak, box); applies right away and reports reboot need (Aeon style). See `UPDATE-PLAN.md` |
 | omageeko-link-skills (new) | links `/usr/share/omageeko/agents/skills/omageeko` into the agent skill dirs Omarchy uses (+ opencode) |
+| omarchy-hyprland-window-equalize-splits (new) | reset the workspace's dwindle splits to even halves, recursively, from window geometry (Hyprland 0.56 `splitratio` only takes a delta); bound to Super+\\ in the host bindings |
 | omarchy-snapshot | create: snapper (all configs), no inline `cleanup` (left to snapper-cleanup.timer; inline it waited on btrfs quotas). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
 
 ## Patches (`patches/`, applied with `--fuzz=0`)

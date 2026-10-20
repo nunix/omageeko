@@ -1,0 +1,81 @@
+#!/usr/bin/python3 -I
+
+# omarchy:summary=Reset the active workspace's tiling splits to even halves
+# omarchy:hidden=true
+# omageeko: Hyprland 0.56's splitratio only takes a delta, so the splits are
+# read back from the window geometry instead: find the line that cuts the tiled
+# windows into two groups, resize a window on that line by half the difference,
+# then do the same inside each group (a split column gets even rows too). Only
+# the tiling (dwindle) layout has splits; focus returns to the window that had it.
+
+import json
+import subprocess
+
+
+def hyprctl(*args):
+    return subprocess.run(["hyprctl", *args], capture_output=True, text=True).stdout
+
+
+def dispatch(expression):
+    hyprctl("dispatch", expression)
+
+
+def tiled_windows():
+    workspace = json.loads(hyprctl("activeworkspace", "-j"))["id"]
+    return [c for c in json.loads(hyprctl("clients", "-j"))
+            if c["workspace"]["id"] == workspace and not c["floating"]
+            and not c["fullscreen"] and not c.get("hidden")]
+
+
+def end(window, axis):
+    return window["at"][axis] + window["size"][axis]
+
+
+def find_cut(windows):
+    """(axis, first group, second group) for a line no window crosses, or None."""
+    for axis in (0, 1):
+        for window in windows:
+            cut = end(window, axis)
+            first = [w for w in windows if end(w, axis) <= cut]
+            second = [w for w in windows if w["at"][axis] >= cut]
+            if first and second and len(first) + len(second) == len(windows):
+                return axis, first, second
+    return None
+
+
+def balance(addresses):
+    # A resize can land a few pixels off (gaps, rounding), so allow a retry
+    for _ in range(3):
+        windows = [w for w in tiled_windows() if w["address"] in addresses]
+        cut = find_cut(windows) if len(windows) > 1 else None
+        if not cut:
+            return
+        axis, first, second = cut
+        low = min(w["at"][axis] for w in windows)
+        high = max(end(w, axis) for w in windows)
+        first_end = max(end(w, axis) for w in first)
+        second_start = min(w["at"][axis] for w in second)
+        diff = int(((high - second_start) - (first_end - low)) / 2)
+        if abs(diff) < 2:
+            break
+        edge = next(w for w in first if end(w, axis) == first_end)
+        dispatch(f'hl.dsp.focus({{ window = "address:{edge["address"]}" }})')
+        x, y = (diff, 0) if axis == 0 else (0, diff)
+        dispatch(f"hl.dsp.window.resize({{ x = {x}, y = {y}, relative = true }})")
+
+    windows = [w for w in tiled_windows() if w["address"] in addresses]
+    cut = find_cut(windows)
+    if cut:
+        balance({w["address"] for w in cut[1]})
+        balance({w["address"] for w in cut[2]})
+
+
+workspace = json.loads(hyprctl("activeworkspace", "-j"))
+if workspace.get("tiledLayout", "dwindle") != "dwindle":
+    print(f"Only the tiling layout has splits (this workspace uses {workspace['tiledLayout']}).")
+    raise SystemExit(0)
+
+focused = json.loads(hyprctl("activewindow", "-j") or "{}").get("address")
+balance({w["address"] for w in tiled_windows()})
+if focused:
+    dispatch(f'hl.dsp.focus({{ window = "address:{focused}" }})')

@@ -23,5 +23,5 @@ Machine-specific user files live in the checkout under `hosts/<DMI product name>
 - Laptop audio is UCM (SOF/ACP). Readable node names come from `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf`.
 - `Super+Shift+S` takes a screenshot (`omarchy-capture-screenshot`, same as PRINT and Trigger › Capture › Screenshot).
 - Fingerprint: lock screen only (the default of the patched `omarchy-setup-security-fingerprint`). `--all` adds sudo + polkit, but agents then can't use sudo unattended; don't enable it.
-- The MX thumb wheel and 3-finger swipes run `omarchy-hyprland-workspace-carousel`; `Super+Ctrl+←/→` runs `omarchy-hyprland-window-swap-columns` (host `bindings.lua` / `input.lua`).
+- The MX thumb wheel and 3-finger swipes run `omarchy-hyprland-workspace-carousel`; `Super+Ctrl+←/→` runs `omarchy-hyprland-window-swap-columns`, `Super+\` runs `omarchy-hyprland-window-equalize-splits` (host `bindings.lua` / `input.lua`).
 - iPhone USB tethering: `usbmuxd` + `imobiledevice-tools`, the `ipheth` driver is in-kernel; trust the phone, replug if needed.

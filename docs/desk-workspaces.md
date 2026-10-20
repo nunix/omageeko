@@ -25,3 +25,7 @@ The workspace carousel (MX thumb wheel, 3-finger swipe; see `touchpad-and-mouse.
 - scrolling layout: the focused column swaps with its neighbour in the pressed direction.
 
 Focus stays on the window that had it. These keys replaced Omarchy's "move grouped window focus"; `Super + Alt + Tab` and `Super + Alt + wheel` still cycle a group.
+
+## Even out splits (`bindings.lua`)
+
+`Super + \` runs `omarchy-hyprland-window-equalize-splits`: after resizing, the workspace's tiling splits go back to even halves, first the columns, then the rows inside each column (a 2×2 grid becomes four equal quarters). Hyprland 0.56's `splitratio` only takes a relative change, so the command reads the splits from the window geometry and resizes a window on each split line by half the difference. Only the tiling (dwindle) layout has splits; focus stays on the window that had it.

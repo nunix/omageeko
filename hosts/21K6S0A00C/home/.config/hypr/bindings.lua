@@ -43,3 +43,7 @@ o.rebind("SUPER + CTRL + RIGHT", "Swap columns", "omarchy-hyprland-window-swap-c
 -- omageeko (21K6S0A00C): screenshot like Trigger › Capture › Screenshot (and PRINT):
 -- drag a rectangle (or snap to a window), then copy/save/edit
 o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
+
+-- omageeko (21K6S0A00C): reset the workspace's splits to even halves (columns,
+-- then rows inside them) after resizing; the key is \| on the US layout
+o.bind("SUPER + backslash", "Even out window splits", "omarchy-hyprland-window-equalize-splits")
