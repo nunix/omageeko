@@ -94,6 +94,10 @@ With a remote repo, a CI job runs `omageeko-bump` on each upstream tag and opens
 | B | `omageeko-bump` with gates 1–8, improved migration and package audits; first real bump: v4.0.4 → v4.0.5 (fix remove-preinstalls, review 6 replaced files, #15655 vs host workspaces) | medium |
 | C | remote repo (OBS or GH Actions) + CI bump bot → two-stage update | medium, needs a hosting decision |
 
+## ABI-coupled packages (2026-10-20)
+
+quickshell (and owe, the Hyprland titlebars plugin) link Qt's or Hyprland's private API, versioned per release (`libQt6Gui.so.6(Qt_6.11.2_PRIVATE_API)`). A snapshot with a new Qt therefore makes `zypper dup` unsolvable until quickshell is rebuilt, but the rebuild used to wait for the dup (the builder may not be newer than the host). Stage 1 now pre-builds stale packages against the published snapshot first (`OMAGEEKO_TARGET_SNAPSHOT` = the builder's snapshot), and the dup includes `omageeko-local`, so the new Qt and the rebuilt quickshell are installed in one transaction. A remote build service (phase C) would do the same automatically.
+
 ## Snapshots (2026-10-19)
 
 Learned from Aeon/MicroOS: `transactional-update` makes one snapshot per update and `--drop-if-no-change` discards it when nothing changed, with pruning left to snapper's timers. `omageeko-update` now takes one pre/post pair for the whole run, with the zypp plugin's per-transaction pairs disabled. It drops the pre snapshot when no package changed, and never prunes inline. Before this, each run added a `single` snapshot plus a pre/post pair per zypper call, each with one boot entry per kernel (71 entries on 2026-10-19), and the inline `snapper cleanup` waited on btrfs quota accounting.

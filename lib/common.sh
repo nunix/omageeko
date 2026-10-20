@@ -140,6 +140,13 @@ check_builder_snapshot() {
   host=$(. /etc/os-release && echo "$VERSION_ID")
   builder=$(in_builder bash -c 'zypper -q ref >/dev/null; zypper -q -n dup --no-recommends >/dev/null; . /etc/os-release; echo $VERSION_ID' | tail -1)
   if (( builder > host )); then
+    # Pre-build for the snapshot the host is about to install (omageeko-update
+    # stage 1): packages tied to Qt/Hyprland ABI must land in the same zypper
+    # dup as the new snapshot, or the dup has no solution
+    if [[ ${OMAGEEKO_TARGET_SNAPSHOT:-} == "$builder" ]]; then
+      log "Builder on $builder: pre-building for the host's upcoming snapshot (host on $host)"
+      return 0
+    fi
     die "Host is on Tumbleweed $host, builder on $builder. Run 'sudo zypper dup' (and reboot if needed) first."
   fi
 }

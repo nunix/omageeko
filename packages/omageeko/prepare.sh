@@ -27,3 +27,6 @@ awk '!/^#/ && NF >= 3 && $1 !~ /^\+/ {
 # The migration classifier ships in the RPM (omageeko-update gates migrations
 # with it even without a checkout); the source of truth is tools/omageeko-bump
 install -m755 "$root/tools/omageeko-bump" "$pkg/omageeko-bump"
+
+# Python bytecode caches next to overlay commands would break `cp overlay/bin/*` in %prep
+find "$pkg/overlay" -name __pycache__ -type d -prune -exec rm -rf {} +

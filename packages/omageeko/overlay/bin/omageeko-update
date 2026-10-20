@@ -66,6 +66,19 @@ rpm_changes() {
 # zypper without the snapper plugin's per-transaction pre/post pair (see Snapshots)
 zyp() { sudo env DISABLE_SNAPPER_ZYPP_PLUGIN=1 zypper "$@"; }
 
+# Rebuild stale omageeko packages in the builder container, printing each one
+# as it starts; sets `built` (space-separated) and returns the build status
+rebuild_packages() {
+  local packages status
+  mapfile -t packages < <(cd "$source_dir/packages" && ls -d -- */ | tr -d /)
+  (cd "$source_dir" && bash -c 'source lib/common.sh && check_builder_snapshot && build_packages "$@"' _ "${packages[@]}") 2>&1 |
+    tee "$state_dir/build.out" | sed -u -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building \(.*\)/      building \1…/p'
+  status=${PIPESTATUS[0]}
+  built=$(sed -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building //p' "$state_dir/build.out" | tr '\n' ' ')
+  rebuild_count=${#packages[@]}
+  return "$status"
+}
+
 # Progress: what a substage is doing, then its result
 step() { echo -e "  \e[36m→\e[0m $*"; }
 result_line() { echo -e "    \e[2m$*\e[0m"; }
@@ -125,8 +138,28 @@ omarchy-update-stay-awake start 2>/dev/null
 
 # --- 1 base: Tumbleweed
 say "1/3 Tumbleweed"
+installed_snapshot=$(. /etc/os-release && echo "${VERSION_ID:-0}")
+published_snapshot=$(timeout 10 curl -fsSL https://download.opensuse.org/tumbleweed/repo/oss/media.1/products 2>/dev/null |
+  awk '{ print $NF }' | cut -d- -f1)
+dup_repos=("${base_repos[@]}")
+if [[ $published_snapshot =~ ^[0-9]{8}$ ]] && ((published_snapshot > installed_snapshot)); then
+  step "Snapshot $installed_snapshot → $published_snapshot"
+  if [[ -n $source_dir ]]; then
+    # Packages built against Qt/Hyprland internals (quickshell, the titlebars
+    # plugin…) block the dup unless their rebuild comes in the same transaction
+    step "Pre-building omageeko packages for $published_snapshot (Qt/Hyprland ABI)"
+    zyp --non-interactive refresh "${base_repos[@]}" >/dev/null 2>&1
+    if OMAGEEKO_TARGET_SNAPSHOT=$published_snapshot rebuild_packages; then
+      result_line "${built:+rebuilt: $built}${built:-nothing to rebuild}"
+    else
+      result_line "pre-build failed (see $state_dir/build.out); the dup may need a decision"
+    fi
+  fi
+fi
+# omageeko-local joins the dup so pre-built packages move together with the snapshot
+[[ " ${omarchy_repos[*]} " == *" omageeko-local "* ]] && dup_repos+=(omageeko-local)
 before=$(rpm_state)
-if OMAGEEKO_DUP_FROM="${base_repos[*]}" OMARCHY_UPDATE_UNATTENDED=1 omarchy-update-system-pkgs; then
+if OMAGEEKO_DUP_FROM="${dup_repos[*]}" OMARCHY_UPDATE_UNATTENDED=1 omarchy-update-system-pkgs; then
   [[ $(rpm_state) == "$before" ]] && set_result base "up to date" || set_result base "updated"
 else
   set_result base "FAILED (zypper needs a decision: run sudo zypper dup in a terminal)"
@@ -152,13 +185,9 @@ if [[ -n $source_dir ]]; then
   fi
 
   # Rebuild what the new snapshot or a source change made stale (stamps skip the rest)
-  mapfile -t packages < <(cd "$source_dir/packages" && ls -d -- */ | tr -d /)
-  step "Rebuild: syncing the builder container with this snapshot, then checking ${#packages[@]} packages"
-  (cd "$source_dir" && bash -c 'source lib/common.sh && check_builder_snapshot && build_packages "$@"' _ "${packages[@]}") 2>&1 |
-    tee "$state_dir/build.out" | sed -u -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building \(.*\)/      building \1…/p'
-  if ((PIPESTATUS[0] == 0)); then
-    built=$(sed -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building //p' "$state_dir/build.out" | tr '\n' ' ')
-    result_line "${built:+rebuilt: $built}${built:-all ${#packages[@]} up to date}"
+  step "Rebuild: syncing the builder container with this snapshot, then checking the packages"
+  if rebuild_packages; then
+    result_line "${built:+rebuilt: $built}${built:-all $rebuild_count up to date}"
   else
     result_line "FAILED (see $state_dir/build.out)"
     omageeko_notes+=("FAILED rebuild: see $state_dir/build.out")

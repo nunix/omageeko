@@ -6,7 +6,7 @@
 
 | Stage | Does |
 |---|---|
-| 1 base | `zypper dup --from` the Tumbleweed repos only (openSUSE distribution repos, codecs, Packman; classified by URL). Non-interactive; a solver question fails the stage and tells the user to run `sudo zypper dup` in a terminal |
+| 1 base | when a newer snapshot is published: pre-build stale omageeko packages against it (builder guard allows `OMAGEEKO_TARGET_SNAPSHOT`), because quickshell/owe/the titlebars plugin use Qt/Hyprland private ABI and block the dup otherwise; then `zypper dup --from` the Tumbleweed repos (openSUSE distribution repos, codecs, Packman; classified by URL) plus `omageeko-local`, so the rebuilds land in the same transaction. Non-interactive; a solver question fails the stage and tells the user to run `sudo zypper dup` in a terminal |
 | 2 omageeko | newer Omarchy release → `omageeko-bump run --apply --install` (only if every gate is green); rebuild stale omageeko RPMs; `zypper update` from `omageeko-local` + `mise`; `mise up` for the tools Omarchy installs with mise (listed in the summary); then migrations, gated |
 | 3 apps | `zypper update` from vendor/add-on repos (Brave, Chrome, OBS home projects…), `flatpak update` (system + user), `omageeko-box update` |
 
