@@ -85,6 +85,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | install.aur | label "Flathub" (all translations), package icon |
 | install.opi, remove.flatpak | inserted (after install.aur / remove.package) |
 | update.omarchy | label "Omageeko" (all translations): runs omageeko-update |
+| shell string `bar.pendingUpdates` | "Omarchy" → "Omageeko" inside every translation (bar update button tooltip: "Pending Omageeko Updates") |
 | update.channel.rc, update.channel.edge | dropped (omageeko: Stable = pinned upstream, Dev = linked checkout) |
 
 ## Vendor repositories (`overlay/share/repos.tsv` → /usr/share/omageeko/repos.tsv)

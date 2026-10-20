@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """omageeko: build-time edits to Omarchy's menu (default/omarchy/omarchy-menu.jsonc)
-and its translations (default/i18n/*/menu.json). Run from the spec's %prep inside
+and its translations (default/i18n/*/menu.json), plus brand names in shell strings
+(default/i18n/*/shell.json). Run from the spec's %prep inside
 the upstream tree. Every rule must match, so upstream renames fail the build."""
 import json, pathlib, re, sys
 
@@ -26,6 +27,9 @@ INSERT = [
 ]
 # translated labels to override in every language that defines them (brand names)
 I18N_LABELS = {"install.aur": "Flathub", "update.omarchy": "Omageeko"}
+# shell strings whose "Omarchy" becomes "Omageeko" in every language (the rest of
+# the translation stays): the bar's update button tooltip
+SHELL_BRAND_KEYS = ["bar.pendingUpdates"]
 
 def entry_re(mid):
     return re.compile(r'^(\s*"' + re.escape(mid) + r'"\s*:\s*\{)(.*)(\},?\s*)$', re.M)
@@ -74,7 +78,24 @@ def main():
             changed += 1
     if changed == 0:
         sys.exit("menu-transform: no translation defines the overridden labels")
-    print(f"menu-transform: {len(SET)} field edits, {len(DROP)} drops, {len(INSERT)} inserts, {changed} translations")
+
+    # Line edits keep the files' own formatting; English must carry the brand
+    shell_changed = 0
+    for f in sorted(I18N.glob("*/shell.json")):
+        lines = f.read_text().splitlines(keepends=True)
+        hit = False
+        for i, line in enumerate(lines):
+            for key in SHELL_BRAND_KEYS:
+                if line.lstrip().startswith(f'"{key}"') and "Omarchy" in line:
+                    lines[i] = line.replace("Omarchy", "Omageeko")
+                    hit = True
+        if hit:
+            f.write_text("".join(lines))
+            shell_changed += 1
+        elif f.parent.name == "en":
+            sys.exit(f"menu-transform: {SHELL_BRAND_KEYS} without 'Omarchy' in {f}")
+    print(f"menu-transform: {len(SET)} field edits, {len(DROP)} drops, {len(INSERT)} inserts, "
+          f"{changed} translations, {shell_changed} shell string files")
 
 if __name__ == "__main__":
     main()
