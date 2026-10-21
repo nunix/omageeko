@@ -69,6 +69,13 @@ rpm_changes() {
     }'
 }
 
+# Stage notes for the summary, "; "-separated
+join_notes() {
+  (($#)) || { echo "up to date"; return; }
+  local IFS=$'\x1f'
+  sed $'s/\x1f/; /g' <<<"$*"
+}
+
 # Summary form of a change list: names only
 change_names() { awk '{ print $1 }' <<<"$1" | paste -sd' '; }
 
@@ -83,7 +90,7 @@ rebuild_packages() {
   (cd "$source_dir" && bash -c 'source lib/common.sh && check_builder_snapshot && build_packages "$@"' _ "${packages[@]}") 2>&1 |
     tee "$state_dir/build.out" | sed -u -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building \(.*\)/      building \1…/p'
   status=${PIPESTATUS[0]}
-  built=$(sed -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building //p' "$state_dir/build.out" | tr '\n' ' ')
+  built=$(sed -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building //p' "$state_dir/build.out" | awk '!seen[$0]++' | tr '\n' ' ')
   rebuild_count=${#packages[@]}
   return "$status"
 }
@@ -172,9 +179,18 @@ if [[ $published_snapshot =~ ^[0-9]{8}$ ]] && ((published_snapshot > installed_s
 fi
 # omageeko-local joins the dup so pre-built packages move together with the snapshot
 [[ " ${omarchy_repos[*]} " == *" omageeko-local "* ]] && dup_repos+=(omageeko-local)
-before=$(rpm_state)
+rpm_versions >"$state_dir/rpms.base-before"
 if OMAGEEKO_DUP_FROM="${dup_repos[*]}" OMARCHY_UPDATE_UNATTENDED=1 omarchy-update-system-pkgs; then
-  [[ $(rpm_state) == "$before" ]] && set_result base "up to date" || set_result base "updated"
+  rpm_versions >"$state_dir/rpms.base-after"
+  count=$(rpm_changes "$state_dir/rpms.base-before" "$state_dir/rpms.base-after" | grep -c .)
+  now_snapshot=$(. /etc/os-release && echo "${VERSION_ID:-0}")
+  if ((count == 0)); then
+    set_result base "up to date (snapshot $now_snapshot)"
+  elif [[ $now_snapshot != "$installed_snapshot" ]]; then
+    set_result base "updated ($count packages, snapshot $installed_snapshot → $now_snapshot)"
+  else
+    set_result base "updated ($count packages)"
+  fi
 else
   base_failed=1
   set_result base "FAILED (zypper needs a decision: run sudo zypper dup in a terminal)"
@@ -287,7 +303,7 @@ else
   omageeko_notes+=("FAILED migration: see $state_dir/migrate.out")
 fi
 omageeko-link-skills >/dev/null
-set_result omageeko "${omageeko_notes[*]:-up to date}"
+set_result omageeko "$(join_notes "${omageeko_notes[@]}")"
 
 # --- 3 apps: vendor app repos, Flatpak, the Arch box
 say "3/3 apps"
@@ -344,7 +360,7 @@ if command -v omageeko-box >/dev/null && podman container exists omageeko-arch 2
     apps_notes+=("FAILED box update: see $state_dir/box.out")
   fi
 fi
-set_result apps "${apps_notes[*]:-up to date}"
+set_result apps "$(join_notes "${apps_notes[@]}")"
 
 # Close the snapshot pair, or drop it when the run changed no package
 if [[ -n $snap_pre ]]; then
@@ -377,14 +393,23 @@ reboot=""
 [[ $(ls /usr/lib/modules | sort -V | tail -1) != "$(uname -r)" ]] && reboot="new kernel"
 zypper needs-rebooting >/dev/null 2>&1
 (($? == 102)) && reboot=${reboot:-core libraries or services updated}
+# Desktop programs still running replaced binaries/libraries (a new Qt under
+# quickshell, a new Hyprland): no reboot, but the session should restart
+relogin=""
+if [[ -z $reboot ]]; then
+  session=$(zypper ps -s 2>/dev/null | awk -F'|' -v uid="$(id -u)" '$3 ~ uid { gsub(/^ +| +$/, "", $5); print $5 }' | sort -u)
+  if grep -qiE '^(Hyprland|quickshell)' <<<"$session"; then
+    relogin="restart the shell (omarchy restart shell), or log out and back in for Hyprland"
+  fi
+fi
 echo
 say "Summary"
 for stage in "${stages[@]}"; do
   printf '  %-9s %s\n' "$stage" "${result[$stage]}"
 done
 jq -n --arg base "${result[base]}" --arg omageeko "${result[omageeko]}" --arg apps "${result[apps]}" \
-  --arg reboot "$reboot" --arg at "$(date -Is)" \
-  '{at: $at, base: $base, omageeko: $omageeko, apps: $apps, reboot: $reboot}' >"$state_dir/last-update.json"
+  --arg reboot "$reboot" --arg relogin "$relogin" --arg at "$(date -Is)" \
+  '{at: $at, base: $base, omageeko: $omageeko, apps: $apps, reboot: $reboot, relogin: $relogin}' >"$state_dir/last-update.json"
 
 status="Updates applied"
 urgency=normal
@@ -396,6 +421,9 @@ fi
 if [[ -n $reboot ]]; then
   echo -e "\n\e[32m$status.\e[0m Reboot to use them ($reboot)."
   omarchy-notification-send -u "$urgency" -g  "$status" "Reboot to use them ($reboot)" 2>/dev/null
+elif [[ -n $relogin ]]; then
+  echo -e "\n\e[32m$status.\e[0m No reboot needed; desktop programs were updated: $relogin."
+  omarchy-notification-send -u "$urgency" -g  "$status" "Desktop updated: $relogin" 2>/dev/null
 else
   echo -e "\n\e[32m$status.\e[0m No reboot needed."
   omarchy-notification-send -u "$urgency" -g  "$status" "No reboot needed" 2>/dev/null

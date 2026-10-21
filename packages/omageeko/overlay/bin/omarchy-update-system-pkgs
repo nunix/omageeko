@@ -38,7 +38,8 @@ if grep -q '^Detected [0-9]* file conflict' "$out" && ((${#owners[@]})); then
     grep -qx "$owner" <<<"$orphans" || all_orphaned=0
   done
   if ((all_orphaned)); then
-    echo -e "\e[33m\nFiles of orphaned packages are taken over by their renamed successors: ${owners[*]}\e[0m"
+    echo -e "\e[33m\nThe abort above is expected: the conflicting files belong to orphaned packages"
+    echo -e "(${owners[*]}), renamed in Tumbleweed. Retrying with their successors taking the files over.\e[0m"
     if omarchy-update-pacman --non-interactive dist-upgrade --auto-agree-with-licenses --replacefiles "${from[@]}"; then
       for owner in "${owners[@]}"; do
         removed=$(LC_ALL=C omarchy-update-pacman --non-interactive remove --dry-run "$owner" 2>&1 | sed -n 's/^\([0-9]*\) packages\? to remove\./\1/p')
