@@ -79,7 +79,12 @@ install -Dm644 config/config.toml %{buildroot}%{_docdir}/%{name}/config.toml.exa
 %check
 # The transition test needs real GL frame timing; containers render with
 # software GL, so run everything else.
-tests=$(meson test -C %{_vpath_builddir} --list 2>/dev/null | sed 's/^owe://' | grep -vx transition || true)
+skip=transition
+# The media test encodes with libx264, which only Packman's ffmpeg has. When the
+# build fell back to Tumbleweed's ffmpeg (lib/build-rpm.sh), skip it: at runtime
+# owe uses the host's Packman ffmpeg (same libavcodec soname).
+ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx264 || skip="$skip|media"
+tests=$(meson test -C %{_vpath_builddir} --list 2>/dev/null | sed 's/^owe://' | grep -vxE "$skip" || true)
 meson test -C %{_vpath_builddir} --print-errorlogs $tests
 QT_QPA_PLATFORM=offscreen ctest --test-dir build-lockfeed --output-on-failure
 

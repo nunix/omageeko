@@ -22,7 +22,19 @@ rm -f "$topdir"/SOURCES/*.spec
 echo ">>> Installing BuildRequires"
 mapfile -t buildreqs < <(rpmspec -q --buildrequires "$spec" | sed -E 's/ +([<>=]+) +/\1/')
 if (( ${#buildreqs[@]} )); then
-  zypper --non-interactive --quiet install --no-recommends "${buildreqs[@]}"
+  if ! zypper --non-interactive --quiet install --no-recommends "${buildreqs[@]}"; then
+    # Packman sometimes publishes builds against a library Tumbleweed has just
+    # dropped or renamed (ffmpeg 9 needing liboapv.so.1 after 20261020), and its
+    # higher priority keeps zypper on the broken candidate. This container is
+    # thrown away, so retry once with Tumbleweed's own packages.
+    if zypper --non-interactive --quiet lr packman-essentials >/dev/null 2>&1; then
+      echo ">>> BuildRequires not installable with Packman; retrying with Tumbleweed's packages"
+      zypper --non-interactive --quiet modifyrepo --disable packman-essentials
+      zypper --non-interactive --quiet install --no-recommends --allow-vendor-change "${buildreqs[@]}"
+    else
+      exit 1
+    fi
+  fi
 fi
 
 echo ">>> Fetching sources"
