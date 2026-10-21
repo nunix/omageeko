@@ -14,6 +14,8 @@
 - The log is in `~/.local/state/omageeko/update.log`; the last result is in `~/.local/state/omageeko/last-update.json`.
 - Stage 2 needs the checkout at `~/omageeko` (or `source=` in `~/.config/omageeko/update.conf`). Without it, stage 2 skips the bump and rebuild but still updates mise, its tools and runs migrations.
 
+Library renames: Tumbleweed sometimes renames a library package without renaming its files (libhiredis1_3_0 → libhiredis1_5_0), so the dup hits a file conflict with the old, now orphaned package. Stage 1 retries with `--replacefiles` only when every conflicting owner is orphaned, then removes each orphan whose removal takes nothing else. Never remove such an orphan *before* the dup: its users (here libunbound8 → gnutls, libvirt/KVM) still need it until they are upgraded.
+
 ## Migrations
 
 Omarchy ships one-shot migrations, run per user by `omarchy-migrate` and recorded in `~/.local/state/omarchy/migrations/`. omageeko classifies pending ones (`/usr/share/omageeko/tools/omageeko-bump classify`):

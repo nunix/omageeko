@@ -14,7 +14,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-pkg-remove | fzf over zypper's user-installed set (≈ `pacman -Qqe`) |
 | omarchy-pkg-aur-install | fzf over Flathub apps |
 | omarchy-update-pacman | `zypper` in a PID 1 scope (args are zypper args); passes `DISABLE_SNAPPER_ZYPP_PLUGIN` through sudo |
-| omarchy-update-system-pkgs | `zypper refresh` + `zypper dup` (restricted with `--from` to `OMAGEEKO_DUP_FROM` when omageeko-update passes the Tumbleweed repos); interactive retry on solver questions |
+| omarchy-update-system-pkgs | `zypper refresh` + `zypper dup` (restricted with `--from` to `OMAGEEKO_DUP_FROM` when omageeko-update passes the Tumbleweed repos); file conflicts only with orphaned packages (renamed library packages, e.g. libhiredis1_3_0 → 1_5_0) retry with `--replacefiles`, then each orphan is removed if a dry run removes nothing else; interactive retry on solver questions |
 | omarchy-update-system-pkgs-when-conflicted | re-runs update-system-pkgs |
 | omarchy-update-pkg-prune | `zypper clean` (packages only) |
 | omarchy-update-keyring | `zypper refresh` (repo keys are zypper's) |

@@ -2,7 +2,8 @@
 
 # omarchy:summary=Update system packages with pacman
 # omarchy:requires-sudo=true
-# omageeko: Tumbleweed port: Tumbleweed updates are a distribution upgrade (zypper dup)
+# omageeko: Tumbleweed port: Tumbleweed updates are a distribution upgrade (zypper dup);
+# file conflicts with orphaned (renamed) library packages are resolved automatically
 
 set -e
 
@@ -19,8 +20,37 @@ done
 
 # Unattended runs can't answer solver questions. Interactive runs retry with
 # zypper's prompts when the non-interactive pass hits a conflict.
-if omarchy-update-pacman --non-interactive dist-upgrade --auto-agree-with-licenses "${from[@]}"; then
-  exit 0
+out=$(mktemp)
+trap 'rm -f "$out"' EXIT
+omarchy-update-pacman --non-interactive dist-upgrade --auto-agree-with-licenses "${from[@]}" 2>&1 | tee "$out"
+((PIPESTATUS[0] == 0)) && exit 0
+
+# File conflicts only with orphaned packages (no repository carries them any
+# more): Tumbleweed renamed a library package without renaming its files, e.g.
+# libhiredis1_3_0 -> libhiredis1_5_0. The new package takes the files (rpm marks
+# them replaced, so removing the orphan later keeps them), then each orphan is
+# removed if a dry run shows nothing else would go with it.
+mapfile -t owners < <(sed -n 's/^ *\([^ ]*\) (@System)$/\1/p' "$out" | sort -u | xargs -r rpm -q --qf '%{NAME}\n' 2>/dev/null | sort -u)
+if grep -q '^Detected [0-9]* file conflict' "$out" && ((${#owners[@]})); then
+  orphans=$(zypper --no-refresh -q packages --orphaned 2>/dev/null | awk -F'|' '/^i/ { gsub(/ /, "", $3); print $3 }')
+  all_orphaned=1
+  for owner in "${owners[@]}"; do
+    grep -qx "$owner" <<<"$orphans" || all_orphaned=0
+  done
+  if ((all_orphaned)); then
+    echo -e "\e[33m\nFiles of orphaned packages are taken over by their renamed successors: ${owners[*]}\e[0m"
+    if omarchy-update-pacman --non-interactive dist-upgrade --auto-agree-with-licenses --replacefiles "${from[@]}"; then
+      for owner in "${owners[@]}"; do
+        removed=$(LC_ALL=C omarchy-update-pacman --non-interactive remove --dry-run "$owner" 2>&1 | sed -n 's/^\([0-9]*\) packages\? to remove\./\1/p')
+        if [[ $removed == 1 ]]; then
+          omarchy-update-pacman --non-interactive remove "$owner" >/dev/null && echo "Removed orphaned $owner"
+        else
+          echo "Kept orphaned $owner (removing it would take ${removed:-other} packages with it)"
+        fi
+      done
+      exit 0
+    fi
+  fi
 fi
 
 if [[ ${OMARCHY_UPDATE_UNATTENDED:-0} == "1" || ! -t 0 ]]; then
