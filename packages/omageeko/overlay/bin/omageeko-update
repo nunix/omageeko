@@ -399,7 +399,7 @@ relogin=""
 if [[ -z $reboot ]]; then
   session=$(zypper ps -s 2>/dev/null | awk -F'|' -v uid="$(id -u)" '$3 ~ uid { gsub(/^ +| +$/, "", $5); print $5 }' | sort -u)
   if grep -qiE '^(Hyprland|quickshell)' <<<"$session"; then
-    relogin="restart the shell (omarchy restart shell), or log out and back in for Hyprland"
+    relogin="restart the shell (Super+Shift+K or omarchy restart shell), or log out and back in for Hyprland"
   fi
 fi
 echo

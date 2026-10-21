@@ -47,3 +47,7 @@ o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
 -- omageeko (21K6S0A00C): reset the workspace's splits to even halves (columns,
 -- then rows inside them) after resizing; the key is \| on the US layout
 o.bind("SUPER + backslash", "Even out window splits", "omarchy-hyprland-window-equalize-splits")
+
+-- omageeko (21K6S0A00C): restart the desktop shell (bar, menus, panels), as
+-- `omarchy restart shell` / Update › Process › Shell, e.g. after a Qt update
+o.bind("SUPER + SHIFT + K", "Restart shell", "omarchy-restart-shell")
