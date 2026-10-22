@@ -1,0 +1,48 @@
+--- a/shell/plugins/clipboard/Clipboard.qml	2026-10-22 15:28:00.973404587 +0200
++++ b/shell/plugins/clipboard/Clipboard.qml	2026-10-22 15:28:00.992309100 +0200
+@@ -74,7 +74,8 @@
+   }
+ 
+   function saveHistory() {
+-    historyFile.setText(JSON.stringify(root.history.slice(0, root.historyLimit), null, 2) + "\n")
++    // omageeko: addEntry bounds unpinned entries; pinned ones are kept on top of the limit
++    historyFile.setText(JSON.stringify(root.history, null, 2) + "\n")
+   }
+ 
+   function addClipboardEntry(entry) {
+@@ -103,7 +104,7 @@
+   }
+ 
+   function confirmClearHistory() {
+-    root.history = ClipboardHistory.clearHistory()
++    root.history = ClipboardHistory.clearHistory(root.history)
+     root.saveHistory()
+     root.selectedIndex = 0
+     root.cursorActive = false
+@@ -113,6 +114,16 @@
+     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+   }
+ 
++  // omageeko: pin/unpin the selected entry (Ctrl+P)
++  function togglePinDisplayIndex(index) {
++    if (index < 0 || index >= displayModel.count) return
++    var row = displayModel.get(index)
++    root.history = ClipboardHistory.togglePinAt(root.history, row.historyIndex)
++    root.saveHistory()
++    root.disarmPointer()
++    root.rebuildDisplay()
++  }
++
+   function removeDisplayIndex(index) {
+     if (index < 0 || index >= displayModel.count) return
+ 
+@@ -366,6 +377,9 @@
+           } else if (Util.editsFilter(event, root.filterText)) {
+             root.setFilter(Util.editedFilter(event, root.filterText))
+             event.accepted = true
++          } else if (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)) {
++            if (root.cursorActive) root.togglePinDisplayIndex(root.selectedIndex)
++            event.accepted = true
+           } else if (event.key === Qt.Key_Delete) {
+             if (event.modifiers & Qt.ShiftModifier) root.requestClearHistory()
+             else root.removeDisplayIndex(root.selectedIndex)

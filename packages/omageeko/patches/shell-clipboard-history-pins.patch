@@ -1,0 +1,98 @@
+--- a/shell/plugins/clipboard/ClipboardHistory.js	2026-10-22 15:28:00.975415856 +0200
++++ b/shell/plugins/clipboard/ClipboardHistory.js	2026-10-22 15:28:22.215406819 +0200
+@@ -1,4 +1,15 @@
++// omageeko: entries can be pinned ({pinned: true}). Pinned entries are listed
++// first, never trimmed by the history limit, and kept by "clear history".
++function withPin(entry, value) {
++  if (entry && value && typeof value === "object" && value.pinned === true) entry.pinned = true
++  return entry
++}
++
+ function normalizeEntry(value) {
++  return withPin(normalizeEntryFields(value), value)
++}
++
++function normalizeEntryFields(value) {
+   if (typeof value === "string")
+     return value.trim().length > 0 ? { type: "text", text: value } : null
+ 
+@@ -59,10 +70,21 @@
+   var key = entryKey(normalized)
+   var next = [normalized]
+   var values = Array.isArray(history) ? history : []
++  var unpinned = 0
+ 
+-  for (var i = 0; i < values.length && next.length < max; i++) {
++  // Copying a pinned entry again keeps it pinned (decided before counting slots)
++  for (var k = 0; k < values.length; k++) {
++    var same = normalizeEntry(values[k])
++    if (same && same.pinned && entryKey(same) === key) normalized.pinned = true
++  }
++
++  for (var i = 0; i < values.length; i++) {
+     var existing = normalizeEntry(values[i])
+     if (!existing || entryKey(existing) === key) continue
++    if (!existing.pinned) {
++      if (unpinned + (normalized.pinned ? 0 : 1) >= max) continue
++      unpinned++
++    }
+     next.push(existing)
+   }
+ 
+@@ -79,8 +101,21 @@
+   return next
+ }
+ 
+-function clearHistory() {
+-  return []
++function clearHistory(history) {
++  var values = Array.isArray(history) ? history : []
++  return values.filter(function(entry) { return entry && entry.pinned === true })
++}
++
++function togglePinAt(history, index) {
++  var values = Array.isArray(history) ? history.slice() : []
++  var target = Number(index)
++  if (isNaN(target) || target < 0 || target >= values.length) return values
++  var entry = normalizeEntry(values[target])
++  if (!entry) return values
++  if (entry.pinned) delete entry.pinned
++  else entry.pinned = true
++  values[target] = entry
++  return values
+ }
+ 
+ function parseEntryJson(line) {
+@@ -194,8 +229,13 @@
+   if (max === 0) return []
+ 
+   var rows = []
+-
+-  for (var i = 0; i < values.length; i++) {
++  var order = []
++  for (var p = 0; p < values.length; p++) if (values[p] && values[p].pinned === true) order.push(p)
++  for (var u = 0; u < values.length; u++) if (!(values[u] && values[u].pinned === true)) order.push(u)
++
++  for (var o = 0; o < order.length; o++) {
++    var i = order[o]
++    var pinned = values[i] && values[i].pinned === true
+     var entry = cappedEntry(normalizeEntry(values[i]))
+     if (!entry) continue
+     if (needle && searchableText(entry).toLowerCase().indexOf(needle) < 0) continue
+@@ -207,7 +247,7 @@
+     rows.push({
+       entryType: isFile ? "file" : entry.type,
+       fullText: isImage ? "" : fullText(entry),
+-      previewText: previewText(entry, tr, trn, fmt),
++      previewText: (pinned ? "\uf08d  " : "") + previewText(entry, tr, trn, fmt),
+       previewImage: previewPath,
+       path: isImage ? String(entry.path || "") : (isFile && paths.length === 1 ? paths[0] : ""),
+       mime: isImage ? String(entry.mime || "image/png") : "text/plain",
+@@ -227,6 +267,7 @@
+     addEntry: addEntry,
+     removeEntryAt: removeEntryAt,
+     clearHistory: clearHistory,
++    togglePinAt: togglePinAt,
+     parseEntryJson: parseEntryJson,
+     searchableText: searchableText,
+     previewText: previewText,

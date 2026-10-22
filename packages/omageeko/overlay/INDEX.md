@@ -60,6 +60,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | shell agents Panel.qml | estimated-spend text for agents without prepaid credit |
 | shell monitor Panel.qml + default/hypr/toggles.lua | displays switched off in the panel stay off for the session (`$XDG_RUNTIME_DIR/omarchy-disabled-monitors`) |
 | omarchy-default-browser | `brave` checks for the `brave-browser` command (Brave's RPM; Arch's brave-bin ships `brave`), so Setup › Defaults › Browser › Brave no longer opens an install terminal |
+| shell clipboard ClipboardHistory.js + Clipboard.qml | pinned entries (Ctrl+P): listed first with a pin mark, not trimmed by the 500-entry limit, kept by Shift+Delete (clear); history saved whole since addEntry bounds unpinned entries |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 
 ## Added files (`overlay/share/`)
