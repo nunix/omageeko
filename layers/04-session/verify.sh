@@ -32,6 +32,7 @@ if (( verify_status == 0 )) && grep -q '^config ok' <<<"$verify_out"; then
 else
   bad "Hyprland --verify-config exit $verify_status: $(sed -n '/parsing result/,$p' <<<"$verify_out" | tail -n +2 | head -3 | tr '\n' ' ')"
 fi
+check "only omarchy-fcitx5.service starts fcitx5 (~/.i18n INPUT_METHOD=none)" grep -q "^export INPUT_METHOD=none" ~/.i18n
 check "~/.bashrc sources Omarchy" grep -q 'default/bash/rc' ~/.bashrc
 patterns=$(grep -v '^#' "$OMAGEEKO_ROOT/layers/04-session/carryover.patterns" | grep -v '^$')
 if [[ -z $patterns ]] || grep -qEf <(echo "$patterns") ~/.bashrc; then ok "carry-over lines present in ~/.bashrc"; else bad "carry-over lines missing from ~/.bashrc"; fi

@@ -117,5 +117,13 @@ else
   printf '[Desktop]\nSession=omarchy\n' >> ~/.dmrc
 fi
 
+# lightdm runs Tumbleweed's xinitrc.common even for the Wayland session, and its
+# /etc/X11/xim starts a second `fcitx5 -d` next to Omarchy's omarchy-fcitx5.service,
+# which then fails on the taken D-Bus name and restarts every 2 s. Opt out per user.
+if ! grep -q '^export INPUT_METHOD=none' ~/.i18n 2>/dev/null; then
+  printf '\n# omageeko: fcitx5 runs as omarchy-fcitx5.service; keep /etc/X11/xim from starting another\nexport INPUT_METHOD=none\n' >> ~/.i18n
+  log "Input method: ~/.i18n INPUT_METHOD=none (omarchy-fcitx5.service owns fcitx5)"
+fi
+
 touch "$STATE_DIR/user-provisioned"
 log "Layer 04 done. Run layers/04-session/verify.sh, then log out and pick 'Omarchy (Hyprland uwsm)' in lightdm."

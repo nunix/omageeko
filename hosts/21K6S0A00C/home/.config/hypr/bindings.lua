@@ -51,3 +51,7 @@ o.bind("SUPER + backslash", "Even out window splits", "omarchy-hyprland-window-e
 -- omageeko (21K6S0A00C): restart the desktop shell (bar, menus, panels), as
 -- `omarchy restart shell` / Update › Process › Shell, e.g. after a Qt update
 o.bind("SUPER + SHIFT + K", "Restart shell", "omarchy-restart-shell")
+
+-- omageeko (21K6S0A00C): clipboard history (Omarchy's themed clipboard panel,
+-- also on Super+Ctrl+V and the bar's clipboard icon): pick an entry to paste it
+o.bind("SUPER + SHIFT + V", "Clipboard manager", { panel = "omarchy.clipboard" })
