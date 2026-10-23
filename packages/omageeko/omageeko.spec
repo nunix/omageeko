@@ -132,7 +132,9 @@ done < %{_sourcedir}/overlay/stubs.tsv
 %build
 # One-glyph icon font (U+E900, Omarchy's code point and metrics): the bar menu
 # button and Update › Omageeko draw it instead of Omarchy's logo
-python3 %{_sourcedir}/make-icon-font.py %{_sourcedir}/overlay/share/branding/omageeko-icon.txt omageeko.ttf
+python3 %{_sourcedir}/make-icon-font.py %{_sourcedir}/overlay/share/branding/omageeko-icon.txt omageeko.ttf omageeko.pbm
+# The same mark as the "omarchy" app icon (icon.png, pixmaps, hicolor): openSUSE green on transparent
+magick omageeko.pbm -colorspace sRGB -type TrueColorAlpha -sample 300x300\! -fill '#73ba25' -opaque black -transparent white PNG32:icon.png
 
 %install
 # ---- omageeko (core): mirrors pkgbuilds/omarchy
@@ -233,8 +235,8 @@ install -Dm644 icon.png %{buildroot}%{_datadir}/pixmaps/omarchy.png
 install -Dm644 icon.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/omarchy.png
 install -Dm644 %{_sourcedir}/overlay/share/branding/logo.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/screensaver.txt
 install -Dm644 logo.txt %{buildroot}%{_datadir}/omageeko/omarchy-logo.txt
-# fastfetch/About logo: the OG wordmark (Omarchy's logo as the O); the original is kept for comparison
-install -Dm644 %{_sourcedir}/overlay/share/branding/about.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/about.txt
+# fastfetch/About logo: the omageeko mark (Omarchy's logo with a G inside, as on the bar); the original is kept for comparison
+install -Dm644 %{_sourcedir}/overlay/share/branding/omageeko-icon.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/about.txt
 install -Dm644 icon.txt %{buildroot}%{_datadir}/omageeko/omarchy-about.txt
 install -Dm644 default/hypr/toggles/flags.lua %{buildroot}%{_sysconfdir}/skel/.local/state/omarchy/toggles/hypr/flags.lua
 install -Dm644 default/nautilus-python/extensions/localsend.py %{buildroot}%{_sysconfdir}/skel/.local/share/nautilus-python/extensions/localsend.py

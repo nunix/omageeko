@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """omageeko: build the one-glyph "omageeko" icon font from a block-art grid.
 
-  make-icon-font.py <grid.txt> <out.ttf>
+  make-icon-font.py <grid.txt> <out.ttf> [out.pbm]
 
 The grid is Omarchy-logo-style block art: "█" filled, space empty, one text row
 per line (a cell is one character wide and one row tall, i.e. 1:2). The glyph
@@ -18,6 +18,7 @@ UPM = 1024
 CODEPOINT = 0xE900
 
 grid_path, out_path = sys.argv[1], sys.argv[2]
+pbm_path = sys.argv[3] if len(sys.argv) > 3 else None
 rows = [line.rstrip("\n") for line in open(grid_path, encoding="utf-8")]
 while rows and not rows[-1].strip():
     rows.pop()
@@ -56,3 +57,12 @@ fb.setupNameTable({"familyName": "omageeko", "styleName": "Regular"})
 fb.setupOS2(sTypoAscender=UPM, sTypoDescender=0, usWinAscent=1116, usWinDescent=0)
 fb.setupPost()
 fb.save(out_path)
+
+# Optional bitmap of the same grid (each text row twice: a cell is 1 wide, 2 tall),
+# for raster icons (the spec scales it to icon.png)
+if pbm_path:
+    with open(pbm_path, "w") as pbm:
+        pbm.write(f"P1\n{width} {len(rows) * 2}\n")
+        for line in rows:
+            bits = " ".join("1" if x < len(line) and line[x] == "█" else "0" for x in range(width))
+            pbm.write(bits + "\n" + bits + "\n")
