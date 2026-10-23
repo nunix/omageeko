@@ -1,4 +1,4 @@
-src = open("/usr/share/omageeko/omarchy-logo.txt").read().splitlines()
+src = open("/etc/skel/.config/omarchy/branding/about.txt").read().splitlines()
 O = [row[::2] for row in src[::2]]
 W = max(len(r) for r in O); O = [r.ljust(W) for r in O]       # 27 x 13
 def g(spec):   # one char per column: '#' block, '.' space
