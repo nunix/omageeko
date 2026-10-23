@@ -103,6 +103,13 @@ if [[ ! -f $branding ]] || cmp -s "$branding" /usr/share/omageeko/omarchy-logo.t
   log "Screensaver text: omageeko logo"
 fi
 
+# fastfetch/About logo: the OG wordmark, swapped only while it is Omarchy's stock logo
+about=~/.config/omarchy/branding/about.txt
+if [[ ! -f $about ]] || cmp -s "$about" /usr/share/omageeko/omarchy-about.txt; then
+  install -Dm644 /etc/skel/.config/omarchy/branding/about.txt "$about"
+  log "About/fastfetch logo: omageeko OG"
+fi
+
 # Make "Omarchy (Hyprland uwsm)" the default lightdm session for this user.
 # lightdm reads AccountsService first and falls back to ~/.dmrc.
 if busctl --system call org.freedesktop.Accounts "/org/freedesktop/Accounts/User$(id -u)" \

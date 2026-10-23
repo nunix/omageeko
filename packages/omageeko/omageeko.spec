@@ -20,6 +20,8 @@ BuildRequires:  ImageMagick
 BuildRequires:  sudo
 BuildRequires:  patch
 BuildRequires:  python3
+# make-icon-font.py: the omageeko bar/menu icon font
+BuildRequires:  python3dist(fonttools)
 Requires:       %{name}-settings = %{version}-%{release}
 Requires:       hyprland
 Requires:       quickshell
@@ -128,6 +130,9 @@ while IFS=$'\t' read -r cmd where reason; do
 done < %{_sourcedir}/overlay/stubs.tsv
 
 %build
+# One-glyph icon font (U+E900, Omarchy's code point and metrics): the bar menu
+# button and Update › Omageeko draw it instead of Omarchy's logo
+python3 %{_sourcedir}/make-icon-font.py %{_sourcedir}/overlay/share/branding/omageeko-icon.txt omageeko.ttf
 
 %install
 # ---- omageeko (core): mirrors pkgbuilds/omarchy
@@ -217,6 +222,7 @@ done
 install -d %{buildroot}%{_datadir}/omarchy/default
 cp -a default/. %{buildroot}%{_datadir}/omarchy/default/
 install -Dm644 default/fonts/omarchy/omarchy.ttf %{buildroot}%{_datadir}/fonts/omarchy/omarchy.ttf
+install -Dm644 omageeko.ttf %{buildroot}%{_datadir}/fonts/omageeko/omageeko.ttf
 
 # omageeko wordmark (same block font as Omarchy's) replaces the Omarchy logo
 install -Dm644 %{_sourcedir}/overlay/share/branding/logo.txt %{buildroot}%{_datadir}/omarchy/logo.txt
@@ -227,7 +233,9 @@ install -Dm644 icon.png %{buildroot}%{_datadir}/pixmaps/omarchy.png
 install -Dm644 icon.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/omarchy.png
 install -Dm644 %{_sourcedir}/overlay/share/branding/logo.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/screensaver.txt
 install -Dm644 logo.txt %{buildroot}%{_datadir}/omageeko/omarchy-logo.txt
-install -Dm644 icon.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/about.txt
+# fastfetch/About logo: the OG wordmark (Omarchy's logo as the O); the original is kept for comparison
+install -Dm644 %{_sourcedir}/overlay/share/branding/about.txt %{buildroot}%{_sysconfdir}/skel/.config/omarchy/branding/about.txt
+install -Dm644 icon.txt %{buildroot}%{_datadir}/omageeko/omarchy-about.txt
 install -Dm644 default/hypr/toggles/flags.lua %{buildroot}%{_sysconfdir}/skel/.local/state/omarchy/toggles/hypr/flags.lua
 install -Dm644 default/nautilus-python/extensions/localsend.py %{buildroot}%{_sysconfdir}/skel/.local/share/nautilus-python/extensions/localsend.py
 install -Dm644 default/nautilus-python/extensions/transcode.py %{buildroot}%{_sysconfdir}/skel/.local/share/nautilus-python/extensions/transcode.py
@@ -323,6 +331,7 @@ done
 %{_datadir}/applications/chromium.desktop
 %{_userunitdir}/*.service
 %{_datadir}/fonts/omarchy/
+%{_datadir}/fonts/omageeko/
 %{_datadir}/pixmaps/omarchy.png
 %{_datadir}/icons/hicolor/*/apps/*
 

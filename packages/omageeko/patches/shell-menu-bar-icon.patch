@@ -1,0 +1,12 @@
+--- a/shell/plugins/menu/BarWidget.qml	2026-10-23 13:52:45.859756833 +0200
++++ b/shell/plugins/menu/BarWidget.qml	2026-10-23 13:52:45.860774450 +0200
+@@ -13,7 +13,8 @@
+     anchors.fill: parent
+     bar: root.bar
+     text: "\ue900"
+-    fontFamily: "omarchy"
++    // omageeko: the omageeko logo (U+E900 in the omageeko icon font, same metrics as Omarchy's)
++    fontFamily: "omageeko"
+     onPressed: function(button) {
+       if (!root.bar) return
+       if (button === Qt.RightButton) root.bar.run("xdg-terminal-exec")

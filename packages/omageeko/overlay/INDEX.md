@@ -61,6 +61,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | shell monitor Panel.qml + default/hypr/toggles.lua | displays switched off in the panel stay off for the session (`$XDG_RUNTIME_DIR/omarchy-disabled-monitors`) |
 | omarchy-default-browser | `brave` checks for the `brave-browser` command (Brave's RPM; Arch's brave-bin ships `brave`), so Setup › Defaults › Browser › Brave no longer opens an install terminal |
 | shell clipboard ClipboardHistory.js + Clipboard.qml | pinned entries (Ctrl+P): listed first with a pin mark, not trimmed by the 500-entry limit, kept by Shift+Delete (clear); history saved whole since addEntry bounds unpinned entries |
+| shell menu BarWidget.qml | bar menu button draws U+E900 from the `omageeko` icon font (omageeko logo) instead of the `omarchy` font |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 
 ## Added files (`overlay/share/`)
@@ -70,6 +71,8 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | `/usr/share/applications/chromium.desktop` (hidden) | Omarchy uses the `chromium.desktop` ID (default browser, web apps, mimeapps.list); TW ships `chromium-browser.desktop` |
 | `/usr/lib/udev/rules.d/60-omageeko-ddcutil-i2c.rules` (omageeko-hardware) | ddcutil's uaccess rule for display I2C buses: Arch installs it, TW only ships it as a sample, so the shell's `ddcutil detect` failed with EACCES and external-monitor brightness didn't work |
 | `/usr/share/wireplumber/wireplumber.conf.d/60-omageeko-ucm-labels.conf` (omageeko-hardware) | readable names for UCM laptop audio nodes (panel labels by node.nick) |
+| `/usr/share/fonts/omageeko/omageeko.ttf` (omageeko-settings) | one-glyph icon font built at build time by `make-icon-font.py` from `overlay/share/branding/omageeko-icon.txt` (Omarchy's logo with a G as the inner square); U+E900 with Omarchy's font metrics |
+| skel `branding/about.txt` (fastfetch/About logo) | the OG wordmark (`overlay/share/branding/about.txt`: Omarchy's logo at half scale as the O, a bold G); upstream's is kept at `/usr/share/omageeko/omarchy-about.txt`, layer 04 swaps the user's copy while it is the stock one |
 | `/usr/share/omarchy/logo.txt` and skel `branding/screensaver.txt` | omageeko wordmark (Omarchy's block font; O/M/A glyphs reused) replaces the Omarchy logo; the original is kept at `/usr/share/omageeko/omarchy-logo.txt` |
 | `/usr/bin/omageeko-monitor-wake-kick` + user unit (omageeko-hardware) | re-wake monitors listed in `~/.config/omageeko/monitor-wake-kick` with a DPMS cycle when they reconnect after deep standby (Odyssey G9 quirk) |
 | `/usr/bin/omageeko-box` | apps from Omarchy's Arch repo in the `omageeko-arch` distrobox (`@box:` map targets) |
@@ -86,7 +89,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | install.package, remove.package | openSUSE logo instead of Arch |
 | install.aur | label "Flathub" (all translations), package icon |
 | install.opi, remove.flatpak | inserted (after install.aur / remove.package) |
-| update.omarchy | label "Omageeko" (all translations): runs omageeko-update |
+| update.omarchy | label "Omageeko" (all translations), icon from the `omageeko` font: runs omageeko-update |
 | shell string `bar.pendingUpdates` | "Omarchy" → "Omageeko" inside every translation (bar update button tooltip: "Pending Omageeko Updates") |
 | update.channel.rc, update.channel.edge | dropped (omageeko: Stable = pinned upstream, Dev = linked checkout) |
 

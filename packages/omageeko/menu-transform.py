@@ -15,6 +15,7 @@ SET = [
     ("install.aur", "icon", "\U000f03d7"),       # package glyph: Flathub replaces the AUR
     ("install.aur", "label", "Flathub"),
     ("update.omarchy", "label", "Omageeko"),    # runs omageeko-update (Tumbleweed, omageeko, apps)
+    ("update.omarchy", "iconFont", "omageeko"), # omageeko logo (same U+E900 glyph slot as Omarchy's)
 ]
 # menu ids to drop (with their children): channels that don't exist on omageeko
 DROP = ["update.channel.rc", "update.channel.edge"]
