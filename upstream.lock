@@ -1,8 +1,8 @@
 repo=https://github.com/omacom/omarchy
 branch=quattro
 track=stable
-commit=84cfb93959f4fe0bbb71de71593b36647d2ba78d
-commit_date=2026-10-14T09:13:38Z
-release=v4.0.4
+commit=5978d93ae7da0a325b7493501911e3f1266cadd3
+commit_date=2026-10-27T08:58:36-05:00
+release=v4.5.0-rc2
 pkgs_repo=https://github.com/omacom/omarchy-pkgs
-pkgs_commit=53ed29f192e29c5d2ea39d83257072a69d5a646c
+pkgs_commit=a224259561daaa18117a0c1adaec7f57a0558e9b
