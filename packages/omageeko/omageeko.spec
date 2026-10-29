@@ -175,7 +175,8 @@ install -Dm644 default/bashrc %{buildroot}%{_sysconfdir}/skel/.bashrc
 
 # /etc defaults safe on Tumbleweed (the rest belongs to later layers or doesn't apply)
 for path in fastfetch/config.jsonc mpv/mpv.conf xdg/kitty/kitty.conf xkb/rules/evdev xkb/symbols/omarchy \
-            gnupg/dirmngr.conf profile.d/omarchy.sh tmpfiles.d/omarchy-nopasswd-sudo.conf; do
+            gnupg/dirmngr.conf profile.d/omarchy.sh tmpfiles.d/omarchy-nopasswd-sudo.conf \
+            sysctl.d/90-omarchy-arp.conf; do
   install -Dm644 etc/$path %{buildroot}%{_sysconfdir}/$path
 done
 for f in etc/mise/conf.d/*; do
@@ -325,6 +326,7 @@ done
 %dir %{_sysconfdir}/gnupg
 %config %{_sysconfdir}/profile.d/omarchy.sh
 %config %{_sysconfdir}/tmpfiles.d/omarchy-nopasswd-sudo.conf
+%config(noreplace) %{_sysconfdir}/sysctl.d/90-omarchy-arp.conf
 %config(noreplace) %{_sysconfdir}/mise/
 %config %attr(0440,root,root) %{_sysconfdir}/sudoers.d/omarchy-*
 %{_datadir}/fontconfig/conf.avail/50-omarchy.conf

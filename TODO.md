@@ -27,7 +27,7 @@ Parked on 2026-10-15 after layer 06b. Ordered as the Omarchy menu reads, top-dow
 - [ ] podman-docker + docker-compose against podman.socket
 - [ ] firewalld instead of ufw: `omarchy-setup-security-sshd` / `remove-security-sshd` stubs
 - [ ] hibernation on dracut + sdbootutil (`omarchy-hibernation-*` stubs); name `resume=` by filesystem UUID, not the kernel device name (upstream fix in 4.5, migration 1792965062)
-- [ ] sysctl / zram / oomd / logind / udev / modprobe drop-ins from upstream `etc/`, each reviewed for TW
+- [ ] sysctl / zram / oomd / logind / udev / modprobe drop-ins from upstream `etc/`, each reviewed for TW (90-omarchy-arp.conf ships since 4.5)
 - [ ] `omarchy update` end-to-end test on a real Tumbleweed snapshot bump
 
 ## omaweed follow-ups

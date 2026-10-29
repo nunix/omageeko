@@ -106,7 +106,7 @@ check_only() {
   if [[ -n $source_dir ]]; then
     echo "  omageeko upstream: $("$source_dir/tools/omageeko-bump" check 2>&1 | tail -1)"
   fi
-  echo "  mise tools: $(MISE_MINIMUM_RELEASE_AGE=0 mise outdated --json 2>/dev/null | jq 'length' 2>/dev/null || echo "?") outdated"
+  echo "  mise tools: $(MISE_MINIMUM_RELEASE_AGE=0 mise outdated --json 2>/dev/null | jq '[.[] | select(.current != null)] | length' 2>/dev/null || echo "?") outdated"
   if ((${#app_repos[@]})); then
     mapfile -t args < <(repo_args "${app_repos[@]}")
     echo "  vendor apps: $(zypper --no-refresh -q list-updates "${args[@]}" 2>/dev/null | grep -c '^v ') update(s) (${app_repos[*]})"
@@ -262,7 +262,7 @@ fi
 if command -v mise >/dev/null; then
   step "mise tools: checking for newer versions"
   outdated=$(MISE_MINIMUM_RELEASE_AGE=0 mise outdated --json 2>/dev/null)
-  tools=$(jq -r 'to_entries | map("\(.key) \(.value.current) → \(.value.latest)") | .[]' <<<"${outdated:-"{}"}" 2>/dev/null)
+  tools=$(jq -r 'to_entries | map(select(.value.current != null) | "\(.key) \(.value.current) → \(.value.latest)") | .[]' <<<"${outdated:-"{}"}" 2>/dev/null)
   if [[ -z $tools ]]; then
     result_line "all current ($(mise ls --global 2>/dev/null | awk '{print $1}' | sort -u | paste -sd' '))"
   elif omarchy-update-mise >"$state_dir/mise.out" 2>&1; then

@@ -10,7 +10,9 @@ pkgdir=$(dirname "$spec")
 topdir=/tmp/rpmbuild
 
 echo ">>> Syncing builder with current Tumbleweed"
-zypper --non-interactive --quiet refresh
+# One unreachable repo (a DNS blip on codecs.opensuse.org) must not fail every
+# build; the dup below works from the metadata that did refresh
+zypper --non-interactive --quiet refresh || echo ">>> refresh had errors (continuing)"
 zypper --non-interactive --quiet dist-upgrade --no-recommends
 
 rm -rf "$topdir"
