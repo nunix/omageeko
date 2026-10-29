@@ -402,11 +402,15 @@ def build_and_verify(report):
         report.add("build", "red", "build-failed", "omageeko", r.stdout.strip().splitlines()[-1] if r.stdout else "")
         (WORK / "build.log").write_text(r.stdout)
         return False
-    rpms = sorted(Path("/var/lib/omageeko/repo").glob("**/omageeko-[0-9]*.noarch.rpm"), key=os.path.getmtime)
+    repo = Path("/var/lib/omageeko/repo")
+    rpms = sorted(repo.glob("**/omageeko-[0-9]*.noarch.rpm"), key=os.path.getmtime)
+    # default/ (bootstrap.lua and the rest of the Hyprland config) ships in omageeko-settings
+    settings = sorted(repo.glob("**/omageeko-settings-[0-9]*.noarch.rpm"), key=os.path.getmtime)
     with tempfile.TemporaryDirectory() as tmp:
-        p1 = subprocess.Popen(["rpm2cpio", str(rpms[-1])], stdout=subprocess.PIPE)
-        subprocess.run(["cpio", "-idm", "--quiet"], stdin=p1.stdout, cwd=tmp, check=True)
-        p1.wait()
+        for rpm in (rpms[-1], settings[-1]):
+            p1 = subprocess.Popen(["rpm2cpio", str(rpm)], stdout=subprocess.PIPE)
+            subprocess.run(["cpio", "-idm", "--quiet"], stdin=p1.stdout, cwd=tmp, check=True)
+            p1.wait()
         tree = Path(tmp) / "usr/share/omarchy"
         wrapper = Path(tmp) / "wrap.lua"
         wrapper.write_text(f'hl.timer = function() end\ndofile("{Path.home()}/.config/hypr/hyprland.lua")\n')
