@@ -1,0 +1,287 @@
+#!/bin/bash
+
+# omarchy:summary=Browse the community themes from omarchy.org and install one
+# omarchy:args=[--refresh] [--list]
+# omarchy:examples=omarchy theme catalog | omarchy theme catalog --list | omarchy theme catalog --refresh
+# omageeko: upstream only asks for a repo URL (omarchy-theme-install). This
+# opens the omarchy.org community themes in the shell's image picker, with the
+# site's screenshots, the number of apps each theme styles beyond what Omarchy
+# renders from colors.toml, and its fit with the omageeko colours: an accent
+# near openSUSE green or Rancher blue is labelled and listed first. Picking one
+# hands its repo to omarchy-theme-install.
+#
+# The index comes from a tree-only shallow clone of each repo, which needs no
+# GitHub API (and so no token or rate limit); it is cached for a week.
+
+CACHE_PATH="${XDG_CACHE_HOME:-$HOME/.cache}/omageeko/theme-catalog"
+INDEX_FILE="$CACHE_PATH/index.tsv"
+PREVIEW_DIR="$CACHE_PATH/previews"
+LABEL_DIR="$CACHE_PATH/labels"
+USER_THEMES_PATH="$HOME/.config/omarchy/themes"
+SITE="https://omarchy.org"
+MAX_AGE_DAYS=7
+
+refresh=false
+list=false
+for arg in "$@"; do
+  case $arg in
+  --refresh) refresh=true ;;
+  --list) list=true ;;
+  *)
+    echo "Usage: omarchy-theme-catalog [--refresh] [--list]" >&2
+    exit 1
+    ;;
+  esac
+done
+
+# A theme file name -> the app it styles. Files Omarchy also renders from
+# colors.toml count too: shipping one means the author tuned that app by hand.
+# Metadata (colors.toml, icons.theme, light.mode, aether.*), images and docs
+# are not apps; neither is anything unknown.
+APP_MAP_AWK='
+  /^hyprland\.(conf|lua)$/ { print "Hyprland"; next }
+  /^hyprlock\.conf$/ { print "Hyprlock"; next }
+  /^(vscode(-theme)?|vscode_colors)\.json$/ { print "VS Code"; next }
+  /^(aether\.)?zed\.json$/ { print "Zed"; next }
+  /^(fzf|colors)\.fish$/ { print "fish"; next }
+  /^shell(\.[a-z-]+)*\.toml$/ { print "Omarchy shell"; next }
+  /^btop\.theme$/ { print "btop"; next }
+  /^neovim\.lua$/ { print "Neovim"; next }
+  /^chromium\.theme$/ { print "Chromium"; next }
+  /^walker\.css$/ { print "Walker"; next }
+  /^waybar\.css$/ { print "Waybar"; next }
+  /^mako\.ini$/ { print "Mako"; next }
+  /^swayosd\.css$/ { print "SwayOSD"; next }
+  /^alacritty\.toml$/ { print "Alacritty"; next }
+  /^ghostty\.conf$/ { print "Ghostty"; next }
+  /^kitty\.conf$/ { print "Kitty"; next }
+  /^foot\.ini$/ { print "Foot"; next }
+  /^gtk\.css$/ { print "GTK"; next }
+  /^qt6ct\.conf$/ { print "Qt"; next }
+  /^vencord\.theme\.css$/ { print "Discord"; next }
+  /^cava_theme$/ { print "Cava"; next }
+  /^wofi\.css$/ { print "Wofi"; next }
+  /^warp\.yaml$/ { print "Warp"; next }
+  /^keyboard\.rgb$/ { print "Keyboard RGB"; next }
+  /^steam\.css$/ { print "Steam"; next }
+  /^heroic\.css$/ { print "Heroic"; next }
+  /^obsidian\.css$/ { print "Obsidian"; next }
+  /^helix\.toml$/ { print "Helix"; next }
+  /^zen\.css$/ { print "Zen"; next }
+  /^firefox\.css$/ { print "Firefox"; next }
+  /^superfile\.toml$/ { print "superfile"; next }
+  /^pi\.json$/ { print "pi"; next }
+  /^hyprland-preview-share-picker\.css$/ { print "Share picker"; next }
+  /^gum[_.]env\.(lua|conf)$/ { print "gum"; next }
+  /^zellij\.kdl$/ { print "Zellij"; next }
+  /^eza\.yml$/ { print "eza"; next }
+  /^vicinae\.toml$/ { print "Vicinae"; next }
+  /^starship\.toml$/ { print "Starship"; next }
+  /^fcitx5/ { print "Fcitx5"; next }
+  /^claude\.json$/ { print "Claude"; next }
+  /^hermes\.yaml$/ { print "Hermes"; next }
+  /^t3code\.json$/ { print "T3 Code"; next }
+  /^tmux.*\.conf$/ { print "tmux"; next }
+  /^lazygit.*\.yml$/ { print "lazygit"; next }
+  /^(spicetify|spotify)/ { print "Spotify"; next }
+'
+
+# Accent hex -> geeko | rancher | other. Hue windows around openSUSE green
+# (#73ba25, 86 deg) and Rancher blue (#3d98d3, 204 deg); greys and near-black
+# or near-white accents carry no colour, so they never fit.
+FIT_AWK='
+  function hex(s) { return index("0123456789abcdef", tolower(s)) - 1 }
+  {
+    r = (hex(substr($1,1,1)) * 16 + hex(substr($1,2,1))) / 255
+    g = (hex(substr($1,3,1)) * 16 + hex(substr($1,4,1))) / 255
+    b = (hex(substr($1,5,1)) * 16 + hex(substr($1,6,1))) / 255
+    max = r; if (g > max) max = g; if (b > max) max = b
+    min = r; if (g < min) min = g; if (b < min) min = b
+    l = (max + min) / 2; d = max - min
+    if (d == 0) { print "other"; exit }
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max == r) h = 60 * (((g - b) / d) % 6)
+    else if (max == g) h = 60 * ((b - r) / d + 2)
+    else h = 60 * ((r - g) / d + 4)
+    if (h < 0) h += 360
+    if (s < 0.25 || l < 0.2 || l > 0.85) print "other"
+    else if (h >= 70 && h <= 160) print "geeko"
+    else if (h >= 190 && h <= 235) print "rancher"
+    else print "other"
+  }
+'
+
+# One theme repo -> "fit<TAB>apps<TAB>app, app, ..." on stdout. The theme lives
+# in the shallowest directory holding its palette (usually the repo root).
+probe_theme() {
+  local repo=$1 preview=$2 slug=$3 work=$4
+  local dir palette root files accent apps fit
+
+  if [[ ! -f $PREVIEW_DIR/$slug.webp ]] &&
+    curl -fsSL --max-time 30 "$SITE$preview" -o "$PREVIEW_DIR/$slug.webp.tmp"; then
+    mv -f "$PREVIEW_DIR/$slug.webp.tmp" "$PREVIEW_DIR/$slug.webp"
+  fi
+
+  dir="$work/$slug"
+  GIT_TERMINAL_PROMPT=0 timeout 120 git clone --quiet --depth 1 --filter=blob:none --no-checkout -- "$repo" "$dir" 2>/dev/null || return
+
+  # Themes older than colors.toml only ship alacritty.toml; omarchy-theme-set
+  # derives their palette from it, with the normal blue as the accent.
+  palette=$(git -C "$dir" ls-tree -r --name-only HEAD |
+    awk -F/ '$NF == "colors.toml" { print 0 "\t" NF "\t" $0 } $NF == "alacritty.toml" { print 1 "\t" NF "\t" $0 }' |
+    sort -n | head -n 1 | cut -f 3)
+  if [[ -z $palette ]]; then
+    rm -rf "$dir"
+    return
+  fi
+  root=${palette%"${palette##*/}"}
+
+  files=$(git -C "$dir" ls-tree --name-only "HEAD:$root")
+  apps=$(awk "$APP_MAP_AWK" <<<"$files" | sort -u)
+  if [[ $palette == *colors.toml ]]; then
+    accent=$(GIT_TERMINAL_PROMPT=0 timeout 60 git -C "$dir" show "HEAD:$palette" 2>/dev/null |
+      sed -nE 's/^[[:space:]]*accent[[:space:]]*=[[:space:]]*["'\'']#?([0-9A-Fa-f]{6})["'\''].*/\1/p' | head -n 1)
+  else
+    accent=$(GIT_TERMINAL_PROMPT=0 timeout 60 git -C "$dir" show "HEAD:$palette" 2>/dev/null | awk '
+      /^[ \t]*\[/ { section = $0; gsub(/[ \t\[\]]/, "", section); next }
+      (section == "colors.normal" && $1 == "blue") || (section == "colors" && $1 == "normal.blue") {
+        if (match($0, /[0-9a-fA-F]{6}/)) { print substr($0, RSTART, RLENGTH); exit }
+      }')
+  fi
+  rm -rf "$dir"
+
+  fit=other
+  [[ -n $accent ]] && fit=$(awk "$FIT_AWK" <<<"$accent")
+
+  printf '%s\t%s\t%s\n' "$fit" "$(grep -c . <<<"$apps")" "$(paste -sd , <<<"$apps" | sed 's/,/, /g')"
+}
+
+build_index() {
+  local page work cards count
+
+  mkdir -p "$PREVIEW_DIR"
+  work=$(mktemp -d)
+  trap 'rm -rf "$work"' RETURN
+
+  page=$(curl -fsSL --max-time 30 "$SITE/themes/") || return 1
+
+  # Each card: <a href="<repo>"><img src="/assets/themes/<x>.webp" ...><span>Name</span></a>.
+  # Repos are held to plain GitHub owner/name, which also keeps them safe to
+  # hand to git and to the install command line.
+  grep -oE '<li><a href="https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/?"[^>]*><img src="/assets/themes/[A-Za-z0-9_.-]+"[^>]*><span[^>]*>[^<]+</span>' <<<"$page" |
+    sed -E 's|.*href="([^"]+[^/"])/?".*src="([^"]+)".*<span[^>]*>([^<]+)</span>|\1\t\2\t\3|' |
+    sed -E "s/&#39;|&#x27;/'/g; s/&quot;/\"/g; s/&amp;/\\&/g" >"$work/cards.tsv"
+
+  count=$(grep -c . "$work/cards.tsv")
+  (( count > 0 )) || return 1
+
+  export -f probe_theme
+  export APP_MAP_AWK FIT_AWK PREVIEW_DIR SITE
+
+  local n=0 repo preview name slug
+  while IFS=$'\t' read -r repo preview name; do
+    n=$((n + 1))
+    slug=$(sed -E 's|https://github\.com/||; s|/|_|' <<<"$repo")
+    printf '%s\0%s\0%s\0%s\0%s\0' "$n" "$repo" "$preview" "$slug" "$name"
+  done <"$work/cards.tsv" |
+    xargs -0 -n 5 -P 8 bash -c '
+      result=$(probe_theme "$2" "$3" "$4" "'"$work"'") || exit 0
+      [[ -n $result ]] || exit 0
+      IFS=$'"'"'\t'"'"' read -r fit apps applist <<<"$result"
+      printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$fit" "$apps" "$5" "$2" "$4" "$applist" >"'"$work"'/row.$1"
+    ' _
+
+  cat "$work"/row.* 2>/dev/null >"$work/index.tsv"
+  [[ -s $work/index.tsv ]] || return 1
+  mv -f "$work/index.tsv" "$INDEX_FILE"
+}
+
+index_is_fresh() {
+  [[ -s $INDEX_FILE ]] && [[ -z $(find "$INDEX_FILE" -mtime +$MAX_AGE_DAYS 2>/dev/null) ]]
+}
+
+# Preferred fit first, then the most apps, then the name.
+sorted_index() {
+  awk -F '\t' 'BEGIN { OFS = "\t" } { print ($1 == "other" ? 1 : 0), $0 }' "$INDEX_FILE" |
+    sort -t $'\t' -k1,1n -k3,3nr -k4,4f | cut -f 2-
+}
+
+# Same name omarchy-theme-install gives the clone.
+installed_name() {
+  basename -- "$1" .git | sed -E 's/^omarchy-//; s/-theme$//' | tr '[:upper:]' '[:lower:]'
+}
+
+mkdir -p "$CACHE_PATH"
+
+if [[ $refresh == true ]] || ! index_is_fresh; then
+  if [[ $list != true ]]; then
+    notify-send -a omarchy -t 5000 "Theme catalog" "Reading the community themes from omarchy.org (about a minute)…"
+  else
+    echo "Reading the community themes from omarchy.org (about a minute)…" >&2
+  fi
+
+  if ! build_index && [[ ! -s $INDEX_FILE ]]; then
+    notify-send -a omarchy -u critical "Theme catalog" "Could not read the themes from omarchy.org"
+    echo "Could not read the themes from omarchy.org" >&2
+    exit 1
+  fi
+fi
+
+if [[ $list == true ]]; then
+  {
+    printf 'FIT\tAPPS\tTHEME\tREPO\n'
+    sorted_index | awk -F '\t' 'BEGIN { OFS = "\t" } { print $1, $2, $3, $4 }'
+  } | column -t -s $'\t'
+  exit 0
+fi
+
+rm -rf "$LABEL_DIR"
+mkdir -p "$LABEL_DIR"
+
+# The picker labels each row after its file name, so the label carries the
+# count and fit; it also filters on it ("geeko", "rancher", "installed").
+declare -A repo_for
+rows=""
+while IFS=$'\t' read -r fit apps name repo slug _; do
+  [[ -f $PREVIEW_DIR/$slug.webp ]] || continue
+
+  case $apps in
+  0) label="${name//\// } · colors only" ;;
+  1) label="${name//\// } · 1 app" ;;
+  *) label="${name//\// } · $apps apps" ;;
+  esac
+  case $fit in
+  geeko) label+=" · Geeko Green" ;;
+  rancher) label+=" · Rancher Blue" ;;
+  esac
+  [[ -d $USER_THEMES_PATH/$(installed_name "$repo") ]] && label+=" · installed"
+
+  link="$LABEL_DIR/$label.webp"
+  [[ -e $link ]] && continue
+  ln -s "$PREVIEW_DIR/$slug.webp" "$link"
+  repo_for[$link]=$repo
+  rows+="${rows:+$'\n'}$link"$'\t'"$link"
+done < <(sorted_index)
+
+selection_file=$(mktemp)
+done_file=$(mktemp)
+rm -f "$done_file"
+trap 'rm -f "$selection_file" "$done_file"' EXIT
+
+# Same handshake omarchy-menu-images uses; rows go base64 through the shell IPC.
+open_result=$(omarchy-shell image-selector open "" "$(printf '%s' "$rows" | base64 -w 0)" "" \
+  "$selection_file" "$done_file" true true)
+if [[ $open_result != "ok" ]]; then
+  echo "Image selector failed to accept request" >&2
+  exit 1
+fi
+
+while [[ ! -e $done_file ]]; do
+  sleep 0.05
+done
+
+selection=$(<"$selection_file")
+[[ -n $selection && -n ${repo_for[$selection]} ]] || exit 0
+repo=${repo_for[$selection]}
+
+exec omarchy-launch-floating-terminal-with-presentation omarchy-theme-install "$repo"

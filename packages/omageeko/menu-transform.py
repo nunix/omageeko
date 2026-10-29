@@ -25,6 +25,9 @@ INSERT = [
         "action": "xdg-terminal-exec --app-id=org.omarchy.terminal omarchy-pkg-opi-install"}),
     ("remove.package", "remove.flatpak", {"icon": "\U000f03d7", "label": "Flatpak",
         "action": "xdg-terminal-exec --app-id=org.omarchy.terminal omarchy-pkg-flatpak-remove"}),
+    # community themes from omarchy.org with their app count, omageeko colours first
+    ("install.style.theme", "install.style.catalog", {"icon": "\U000f03d8", "label": "Theme Catalog",
+        "action": "omarchy-theme-catalog"}),
 ]
 # translated labels to override in every language that defines them (brand names)
 I18N_LABELS = {"install.aur": "Flathub", "update.omarchy": "Omageeko"}
