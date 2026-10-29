@@ -7,9 +7,11 @@
 %global commit_date 20261014
 %global upstream_release 4.0.4
 %global shortcommit %(echo %{commit} | cut -c1-7)
+# RPM forbids '-' in Version; '~' keeps a pre-release (4.5.0-rc2) sorting before its final release
+%global rpm_release %(echo %{upstream_release} | tr - '~')
 
 Name:           omageeko
-Version:        %{upstream_release}+git%{commit_date}.%{shortcommit}
+Version:        %{rpm_release}+git%{commit_date}.%{shortcommit}
 Release:        1.omageeko%{?dist}
 Summary:        Omarchy desktop (quattro) on openSUSE Tumbleweed
 License:        MIT
