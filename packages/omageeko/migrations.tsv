@@ -1,1 +1,9 @@
 # migration <TAB> run|skip|patched <TAB> reason (omageeko-bump decide)
+1789928586.sh	skip	aarch64 + /etc/default/limine only; keeps ARM limine packages via pacman -D; omageeko is x86_64 on systemd-boot
+1790917773.sh	skip	N1x limine-entry-tool cmdline + limine-mkinitcpio; no such conf on systemd-boot/dracut
+1790950659.sh	skip	N1x mkinitcpio hook + limine-mkinitcpio; omageeko uses dracut, no N1x hardware
+1790984700.sh	skip	N1x limine-entry-tool drop-in only; absent on systemd-boot
+1791152480.sh	skip	N1x rescue pacman hook + limine-entry-tool; neither exists on Tumbleweed
+1791554699.sh	skip	ARM CPPC power-profiles-daemon swap via pacman; TW's power-profiles-daemon is installed, so it would fire and fail
+1791621765.sh	skip	mkinitcpio/limine-mkinitcpio vconsole rebuild; omageeko builds the initrd with dracut
+1792965062.sh	skip	limine resume.conf + mkinitcpio resume hook only; omarchy-hibernation-setup is stubbed on omageeko

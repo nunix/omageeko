@@ -1,9 +1,9 @@
---- a/shell/plugins/panels/monitor/Panel.qml	2026-10-15 14:51:35.155728609 +0200
-+++ b/shell/plugins/panels/monitor/Panel.qml	2026-10-15 14:51:35.169045762 +0200
-@@ -308,7 +308,15 @@
+--- a/shell/plugins/panels/monitor/Panel.qml
++++ b/shell/plugins/panels/monitor/Panel.qml
+@@ -310,7 +310,15 @@
      var expr = enabled
        ? 'hl.monitor({ output = ' + output + ', disabled = true })'
-       : 'hl.monitor({ output = ' + output + ', disabled = false, mode = "preferred", position = "auto", scale = "auto" })'
+       : 'hl.monitor({ output = ' + output + ', disabled = false })'
 -    actionProc.command = ["hyprctl", "eval", expr]
 +    // omageeko (from omaweed): remember displays switched off here for the rest of
 +    // the session, so config reloads (theme switches) do not turn them back on.

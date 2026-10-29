@@ -26,13 +26,17 @@ Parked on 2026-10-15 after layer 06b. Ordered as the Omarchy menu reads, top-dow
 - [ ] bolt (Thunderbolt), wireless-regdb, qemu binfmt
 - [ ] podman-docker + docker-compose against podman.socket
 - [ ] firewalld instead of ufw: `omarchy-setup-security-sshd` / `remove-security-sshd` stubs
-- [ ] hibernation on dracut + sdbootutil (`omarchy-hibernation-*` stubs)
+- [ ] hibernation on dracut + sdbootutil (`omarchy-hibernation-*` stubs); name `resume=` by filesystem UUID, not the kernel device name (upstream fix in 4.5, migration 1792965062)
 - [ ] sysctl / zram / oomd / logind / udev / modprobe drop-ins from upstream `etc/`, each reviewed for TW
 - [ ] `omarchy update` end-to-end test on a real Tumbleweed snapshot bump
 
 ## omaweed follow-ups
 - [ ] Visually check: monitor panel disable survives a theme switch; Remove › Flatpak and Install › OPI entries
 - [ ] Delete the `omaweed` branch in nunix/omarchy-mac once happy (archived in `archive/omaweed/`)
+
+## 4.5 follow-ups (bump to v4.5.0-rc2)
+- [ ] T3 Code now installs as a self-updating AppImage (`omarchy-install-t3code-app`): test on TW (FUSE)
+- [ ] OpenClaw is now a seed tarball in /usr/share/openclaw; test `omarchy-install-openclaw-cli --now`
 
 ## Later / optional
 - [ ] superwhisper-bin (proprietary dictation)

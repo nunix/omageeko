@@ -1,15 +1,15 @@
---- a/bin/omarchy-remove-preinstalls	2026-10-15 10:02:08.421803217 +0200
-+++ b/bin/omarchy-remove-preinstalls	2026-10-15 10:02:08.422995369 +0200
-@@ -13,9 +13,14 @@
-   hyprctl reload
+--- a/bin/omarchy-remove-preinstalls
++++ b/bin/omarchy-remove-preinstalls
+@@ -16,9 +16,14 @@
+   omarchy-mise-default-tools disable || exit 1
  
-   # Remove mise stubs
+   # Remove wrappers left by older Omarchy releases.
 -  rm -f ~/.local/bin/codex ~/.local/bin/claude ~/.local/bin/agy ~/.local/bin/copilot \
 -       ~/.local/bin/gh ~/.local/bin/opencode ~/.local/bin/playwright ~/.local/bin/playwright-cli ~/.local/bin/pi \
--       ~/.local/bin/omp ~/.local/bin/ori ~/.local/bin/grok ~/.local/bin/crush ~/.local/bin/ghui ~/.local/bin/hunk
+-       ~/.local/bin/omp ~/.local/bin/ori ~/.local/bin/cf ~/.local/bin/grok ~/.local/bin/crush ~/.local/bin/ghui ~/.local/bin/hunk
 +  # omageeko: only delete Omarchy's own mise wrappers; a native install at the same
 +  # path (e.g. Claude Code's ~/.local/bin/claude symlink) is the user's, not a preinstall.
-+  for stub in codex claude agy copilot gh opencode playwright playwright-cli pi omp ori grok crush ghui hunk; do
++  for stub in codex claude agy copilot gh opencode playwright playwright-cli pi omp ori cf grok crush ghui hunk; do
 +    if [[ -f ~/.local/bin/$stub && ! -L ~/.local/bin/$stub ]] &&
 +      grep -q '^mise use -g --quiet ' ~/.local/bin/$stub; then
 +      rm -f ~/.local/bin/$stub

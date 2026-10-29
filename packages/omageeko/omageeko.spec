@@ -107,7 +107,7 @@ python3 %{_sourcedir}/menu-transform.py
 # Overlay: full replacements of Arch-coupled commands
 cp -f %{_sourcedir}/overlay/bin/* bin/
 # Overlay: additions to the Quickshell desktop tree (e.g. agent icons)
-cp -a %{_sourcedir}/overlay/shell/. shell/
+[[ ! -d %{_sourcedir}/overlay/shell ]] || cp -a %{_sourcedir}/overlay/shell/. shell/
 # Stubs: keep upstream's omarchy: metadata so the CLI router still lists them
 while IFS=$'\t' read -r cmd where reason; do
   [[ -z $cmd || $cmd == \#* ]] && continue

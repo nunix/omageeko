@@ -141,7 +141,8 @@ plymouth               07 plymouth                         # already installed; 
 sddm                   -  -                                # decision: keep lightdm
 
 # --- 08: system services
-power-profiles-daemon  05 power-profiles-daemon
+omarchy-power-profiles-daemon 05 power-profiles-daemon  # Omarchy's build adds cppc_cpufreq (ARM); stock TW daemon covers amd-pstate
+power-profiles-daemon  -  power-profiles-daemon
 bluez                  05 bluez
 bluez-tools            05 @build                                # bt-agent for Omarchy's pairing agent; not in TW (NOT part of bluez)
 bluez-utils            -  -                                # TW's bluez ships the CLI tools
@@ -206,6 +207,24 @@ kernel-modules-hook    -  -                                # Arch kernel-upgrade
 asdcontrol             -  -                                # Apple Studio Display brightness; not relevant on this hardware
 dotnet-runtime         -  -                                # Arch pinta dependency; TW pinta brings its own
 superwhisper-bin       -  -                                # proprietary dictation; revisit as optional
+pipewire-libcamera     -  pipewire-spa-plugins-0_2         # TW ships the libcamera SPA plugin in the main plugin package
+archlinuxarm-keyring   -  -                                # not applicable: Arch Linux ARM keyring
+linux-omarchy          -  -                                # not applicable: Arch kernel; TW kernel-default
+linux-omarchy-headers  -  -                                # not applicable: Arch kernel headers
+linux-omarchy-n1x      -  -                                # not applicable: NVIDIA N1x (aarch64) kernel
+linux-omarchy-n1x-headers -  -                             # not applicable: NVIDIA N1x (aarch64) kernel headers
+linux-firmware-qcom    -  -                                # not applicable: Qualcomm (Snapdragon) firmware
+qcom-firmware-extract  -  -                                # not applicable: Qualcomm (Snapdragon) firmware extractor
+vulkan-freedreno       -  -                                # not applicable: Qualcomm Adreno Vulkan driver
+asus-proart-p14-speaker-firmware -  -                      # not applicable: ASUS ProArt P14 model firmware
+dgx-dashboard          -  -                                # not applicable: NVIDIA DGX/N1x app
+nsight-compute         -  -                                # not applicable: NVIDIA tooling (no NVIDIA GPU)
+nsight-systems         -  -                                # not applicable: NVIDIA tooling (no NVIDIA GPU)
+nvidia-ai-workbench    -  -                                # not applicable: NVIDIA tooling (no NVIDIA GPU)
+nvidia-container-toolkit -  -                              # not applicable: NVIDIA GPU containers (no NVIDIA GPU)
+nvidia-open-dkms       -  -                                # not applicable: NVIDIA driver (no NVIDIA GPU)
+nvidia-utils           -  -                                # not applicable: NVIDIA driver (no NVIDIA GPU)
+libva-nvidia-driver    -  -                                # not applicable: NVIDIA VA-API (no NVIDIA GPU)
 
 # --- 06a: names used by Omarchy's Install/Remove menus and omarchy-install-* commands
 # All on demand (layer "-"): translated for omarchy-pkg-add, never installed up front.
@@ -260,6 +279,7 @@ claude-desktop         -  @box:claude-desktop
 openai-codex-desktop   -  @box:openai-codex-desktop
 hermes-desktop         -  @box:hermes-desktop
 t3code-bin             -  @box:t3code-bin
+t3code-nightly-bin     -  @box:t3code-nightly-bin          # only dropped now: upstream installs the self-updating AppImage
 grok-bot               -  @box:grok-bot
 perplexity             -  @box:perplexity
 once-bin               -  @build:once                      # needs podman-docker (Docker CLI/socket via podman)

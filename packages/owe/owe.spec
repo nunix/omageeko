@@ -1,15 +1,13 @@
-# omageeko: port of omarchy-pkgs/pkgbuilds/owe (0.2.10-4) and owe-lockfeed (0.2.10-2)
+# omageeko: port of omarchy-pkgs/pkgbuilds/owe (0.2.12-1) and owe-lockfeed (0.2.12-1)
 %global debug_package %{nil}
 
 Name:           owe
-Version:        0.2.10
-Release:        4.omageeko%{?dist}
+Version:        0.2.12
+Release:        1.omageeko%{?dist}
 Summary:        High-performance wallpaper engine for Omarchy (mp4, gif, stills)
 License:        MIT
 URL:            https://github.com/omacom/owe
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-# Upstream 9876702: invalidation test independent of filesystem timestamps
-Patch0:         lock-policy-timestamp.patch
 # Restarts running owed user services after upgrades (pacman hook on Arch)
 Source1:        package-restart
 BuildRequires:  meson

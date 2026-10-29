@@ -1,9 +1,9 @@
-# omageeko: port of omarchy-pkgs/pkgbuilds/ttfx (0.5.0-3)
+# omageeko: port of omarchy-pkgs/pkgbuilds/ttfx (0.5.1-1)
 %global debug_package %{nil}
 
 Name:           ttfx
-Version:        0.5.0
-Release:        3.omageeko%{?dist}
+Version:        0.5.1
+Release:        1.omageeko%{?dist}
 Summary:        Terminal text effects as a single static binary (Rust port of terminaltexteffects)
 License:        MIT
 URL:            https://github.com/omacom/ttfx

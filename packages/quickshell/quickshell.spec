@@ -1,14 +1,17 @@
-# omageeko: port of omarchy-pkgs/pkgbuilds/quickshell (0.3.2-4)
+# omageeko: port of omarchy-pkgs/pkgbuilds/quickshell (0.3.2.r7.g2b4501a-3)
 %global debug_package %{nil}
 %define __builder ninja
+# master past v0.3.2, the commit omarchy-pkgs pins
+%global commit 2b4501a282689792b62e94f3fb30d8f512324fe6
+%global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 Name:           quickshell
-Version:        0.3.2
-Release:        4.omageeko%{?dist}
+Version:        0.3.2^7.g%{shortcommit}
+Release:        3.omageeko%{?dist}
 Summary:        Flexible toolkit for making desktop shells with QtQuick
 License:        LGPL-3.0-only
 URL:            https://github.com/quickshell-mirror/quickshell
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        %{url}/archive/%{commit}.tar.gz#/%{name}-%{shortcommit}.tar.gz
 # Omarchy: opt-in "//@ pragma OmarchyLoadPatch" pins unversioned QtQuick imports to 6.11
 Patch0:         load_qtquick_611.patch
 BuildRequires:  cmake
@@ -59,13 +62,14 @@ screens, notification centers) with QtQuick. This build carries Omarchy's
 QtQuick 6.11 import-pinning patch and powers the omageeko/Omarchy desktop.
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n %{name}-%{commit}
 
 %build
 %cmake -W no-dev \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   -DDISTRIBUTOR="omageeko (openSUSE Tumbleweed)" \
   -DCRASH_HANDLER=OFF \
+  -DGIT_REVISION=%{commit} \
   -DINSTALL_QML_PREFIX=%{_lib}/qt6/qml
 %cmake_build
 

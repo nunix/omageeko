@@ -2,8 +2,12 @@
 
 # omarchy:summary=Print when system packages were last upgraded
 # omageeko: Tumbleweed port: newest package install time from the rpm database
-# (zypper's history log is root-only)
+# (zypper's history log is root-only); upstream's localized about.updatedAt output
 
 last=$(rpm -qa --qf '%{INSTALLTIME}\n' | sort -n | tail -1)
 [[ -n $last ]] || exit 1
-date -d "@$last" "+%A, %B %d %Y at %H:%M"
+locale=$(omarchy-language locale)
+
+omarchy-i18n about.updatedAt \
+  "$(LC_TIME=$locale date -d "@$last" +"%A %d %B %Y")" \
+  "$(date -d "@$last" +"%H:%M")"
