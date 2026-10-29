@@ -31,7 +31,11 @@ fi
 while read -r name version; do
   [[ -n $name ]] && updates+=("$name $version")
 done < <(zypper --no-refresh -q list-updates --repo omageeko-local 2>/dev/null |
-  awk -F'|' 'NF >= 5 { n = $3; v = $5; gsub(/ /, "", n); gsub(/ /, "", v); if (n != "" && n != "Name" && n !~ /^-+$/) print n, v }')
+  awk -F'|' '
+    # Columns by header name: --repo drops the Repository column
+    { for (i = 1; i <= NF; i++) { f[i] = $i; gsub(/^ +| +$/, "", f[i]) } }
+    !ni { for (i = 1; i <= NF; i++) { if (f[i] == "Name") ni = i; if (f[i] == "Available Version") vi = i }; next }
+    NF >= vi && f[ni] != "" { print f[ni], f[vi] }')
 
 if (( ${#updates[@]} > 0 )); then
   printf '%s\n' "${updates[@]}"
