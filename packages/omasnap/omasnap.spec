@@ -13,6 +13,7 @@ BuildRequires:  cmake
 BuildRequires:  ninja
 BuildRequires:  gcc-c++
 BuildRequires:  pkgconfig
+BuildRequires:  pkgconfig(libdeflate)
 BuildRequires:  wayland-devel
 BuildRequires:  wayland-protocols-devel
 BuildRequires:  layer-shell-qt6-devel
