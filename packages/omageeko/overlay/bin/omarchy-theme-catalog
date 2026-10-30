@@ -6,15 +6,15 @@
 # omageeko: upstream only asks for a repo URL (omarchy-theme-install). This
 # opens the omarchy.org community themes in the shell's image picker, with the
 # site's screenshots, the number of apps each theme styles beyond what Omarchy
-# renders from colors.toml, its GitHub stars and, when it publishes release
-# assets, their downloads. Picking one hands its repo to omarchy-theme-install.
+# renders from colors.toml, its GitHub stars and how long ago its default
+# branch last got a commit. Picking one hands its repo to omarchy-theme-install.
 #
 # App counts come from a tree-only shallow clone of each repo, which needs no
-# GitHub API. Stars and downloads take one batched GraphQL query per 80 repos
+# GitHub API. Stars and commit dates take one batched GraphQL query per 80 repos
 # through gh, so they only show when gh is logged in. Cached for a week.
 
 CACHE_PATH="${XDG_CACHE_HOME:-$HOME/.cache}/omageeko/theme-catalog"
-INDEX_FILE="$CACHE_PATH/index.v2.tsv"
+INDEX_FILE="$CACHE_PATH/index.v3.tsv"
 PREVIEW_DIR="$CACHE_PATH/previews"
 LABEL_DIR="$CACHE_PATH/labels"
 USER_THEMES_PATH="$HOME/.config/omarchy/themes"
@@ -119,8 +119,8 @@ probe_theme() {
   printf '%s\t%s\n' "$(grep -c . <<<"$apps")" "$(paste -sd , <<<"$apps" | sed 's/,/, /g; s/^$/-/')"
 }
 
-# owner/name lines on stdin -> "owner/name<TAB>stars<TAB>downloads", downloads
-# summed over every release asset. Nothing when gh is missing or logged out.
+# owner/name lines on stdin -> "owner/name<TAB>stars<TAB>YYYY-MM-DD" of the last
+# commit on the default branch. Nothing when gh is missing or logged out.
 fetch_stats() {
   local batch query i owner name
 
@@ -132,15 +132,16 @@ fetch_stats() {
       owner=${batch[$i]%%/*}
       name=${batch[$i]#*/}
       query+=" r$i: repository(owner: \"$owner\", name: \"$name\") { stargazerCount"
-      query+=" releases(first: 50) { nodes { releaseAssets(first: 50) { nodes { downloadCount } } } } }"
+      query+=" pushedAt defaultBranchRef { target { ... on Commit { committedDate } } } }"
     done
     query+=" }"
     # Keyed by alias, not nameWithOwner: a renamed or moved repo answers with
     # its new name.
-    while IFS=$'\t' read -r i stars downloads; do
-      printf '%s\t%s\t%s\n' "${batch[$i]}" "$stars" "$downloads"
+    while IFS=$'\t' read -r i stars updated; do
+      printf '%s\t%s\t%s\n' "${batch[$i]}" "$stars" "$updated"
     done < <(gh api graphql -f query="$query" 2>/dev/null | jq -r '.data // {} | to_entries[] | select(.value != null) |
-      [(.key | ltrimstr("r")), .value.stargazerCount, ([.value.releases.nodes[].releaseAssets.nodes[].downloadCount] | add // 0)] | @tsv')
+      [(.key | ltrimstr("r")), .value.stargazerCount,
+       ((.value.defaultBranchRef.target.committedDate // .value.pushedAt // "-") | .[0:10])] | @tsv')
   done
 }
 
@@ -184,8 +185,8 @@ build_index() {
 
   cut -f 3 "$work/rows.tsv" | sed 's|https://github\.com/||' | fetch_stats >"$work/stats.tsv"
   awk -F '\t' 'BEGIN { OFS = "\t" }
-    NR == FNR { stars[$1] = $2; downloads[$1] = $3; next }
-    { key = substr($3, 20); print $0, stars[key], downloads[key] }' \
+    NR == FNR { stars[$1] = $2; updated[$1] = $3; next }
+    { key = substr($3, 20); print $0, stars[key], updated[key] }' \
     "$work/stats.tsv" "$work/rows.tsv" >"$work/index.tsv"
   mv -f "$work/index.tsv" "$INDEX_FILE"
 }
@@ -197,6 +198,21 @@ index_is_fresh() {
 # Most apps first, then the most stars, then the name.
 sorted_index() {
   sort -t $'\t' -k1,1nr -k6,6nr -k2,2f "$INDEX_FILE"
+}
+
+# YYYY-MM-DD -> 3d, 5w, 4mo, 2y: compact, since the picker capitalises words.
+age() {
+  local days=$(( ($(date +%s) - $(date -d "$1" +%s)) / 86400 ))
+
+  if (( days < 14 )); then
+    printf '%dd' "$days"
+  elif (( days < 60 )); then
+    printf '%dw' $((days / 7))
+  elif (( days < 365 )); then
+    printf '%dmo' $((days / 30))
+  else
+    printf '%dy' $((days / 365))
+  fi
 }
 
 # 1234 -> 1.2k
@@ -231,8 +247,8 @@ fi
 
 if [[ $list == true ]]; then
   {
-    printf 'APPS\tSTARS\tDOWNLOADS\tTHEME\tREPO\n'
-    sorted_index | awk -F '\t' 'BEGIN { OFS = "\t" } { print $1, ($6 == "" ? "-" : $6), ($7 > 0 ? $7 : "-"), $2, $3 }'
+    printf 'APPS\tSTARS\tUPDATED\tTHEME\tREPO\n'
+    sorted_index | awk -F '\t' 'BEGIN { OFS = "\t" } { print $1, ($6 == "" ? "-" : $6), ($7 == "" ? "-" : $7), $2, $3 }'
   } | column -t -s $'\t'
   exit 0
 fi
@@ -244,7 +260,7 @@ mkdir -p "$LABEL_DIR"
 # counts; it also filters on it (a name, "installed").
 declare -A repo_for
 rows=""
-while IFS=$'\t' read -r apps name repo slug _ stars downloads; do
+while IFS=$'\t' read -r apps name repo slug _ stars updated; do
   [[ -f $PREVIEW_DIR/$slug.webp ]] || continue
 
   case $apps in
@@ -253,7 +269,7 @@ while IFS=$'\t' read -r apps name repo slug _ stars downloads; do
   *) label="${name//\// } · $apps apps" ;;
   esac
   [[ -n $stars ]] && label+=" · ★ $(short_count "$stars")"
-  (( ${downloads:-0} > 0 )) && label+=" · $(short_count "$downloads") downloads"
+  [[ $updated == ????-??-?? ]] && label+=" · ↻ $(age "$updated")"
   [[ -d $USER_THEMES_PATH/$(installed_name "$repo") ]] && label+=" · installed"
 
   link="$LABEL_DIR/$label.webp"
