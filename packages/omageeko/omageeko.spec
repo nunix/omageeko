@@ -99,6 +99,24 @@ that re-wakes monitors listed in ~/.config/omageeko/monitor-wake-kick when they
 reconnect after deep standby but stay dark, and a service that puts bonded
 Bluetooth LE devices into Device Privacy Mode so they can reconnect.
 
+%package        system
+Summary:        Omarchy memory and scheduling defaults for Tumbleweed
+Requires:       zram-generator
+# systemd-oomd ships in Tumbleweed's systemd-experimental
+Requires:       systemd-experimental
+Requires:       scx
+Requires:       procps
+Requires:       udev
+
+%description    system
+Omarchy's memory and scheduling stack adapted to the stock Tumbleweed kernel:
+swap on zram (zstd) with zswap off, reclaim and writeback sysctls tuned for
+zram, BBR with fq, raised inotify limits, systemd-oomd killing only user apps
+under sustained memory pressure, and the Kyber I/O scheduler on whole disks,
+all from Omarchy's own files. omageeko adds the multi-gen LRU (built into
+Omarchy's kernel) and sched_ext's scx_lavd in place of Omarchy's BORE kernel
+patch. Layer 08 enables the services.
+
 %prep
 %setup -q -n omarchy-%{commit}
 for p in %{_sourcedir}/patches/*.patch; do
@@ -266,6 +284,19 @@ install -Dm755 %{_sourcedir}/overlay/share/libexec/bt-device-privacy %{buildroot
 install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-bt-device-privacy.service %{buildroot}%{_unitdir}/omageeko-bt-device-privacy.service
 install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-bt-device-privacy.timer %{buildroot}%{_unitdir}/omageeko-bt-device-privacy.timer
 
+# ---- omageeko-system (layer 08): Omarchy's files, at Tumbleweed's vendor paths
+install -Dm644 default/systemd/zram-generator.conf.d/90-omarchy.conf \
+  %{buildroot}%{_prefix}/lib/systemd/zram-generator.conf.d/90-omarchy.conf
+for f in 99-omarchy-sysctl.conf 90-omarchy-file-watchers.conf; do
+  install -Dm644 etc/sysctl.d/$f %{buildroot}%{_sysctldir}/$f
+done
+install -Dm644 etc/systemd/oomd.conf.d/10-omarchy.conf %{buildroot}%{_prefix}/lib/systemd/oomd.conf.d/10-omarchy.conf
+install -Dm644 default/systemd/user/app.slice.d/10-oomd.conf %{buildroot}%{_userunitdir}/app.slice.d/10-oomd.conf
+install -Dm644 etc/tmpfiles.d/omarchy-zswap.conf %{buildroot}%{_tmpfilesdir}/omarchy-zswap.conf
+install -Dm644 etc/udev/rules.d/60-omarchy-io-scheduler.rules %{buildroot}%{_udevrulesdir}/60-omarchy-io-scheduler.rules
+install -Dm644 %{_sourcedir}/overlay/share/system/omageeko-mglru.conf %{buildroot}%{_tmpfilesdir}/omageeko-mglru.conf
+install -Dm644 %{_sourcedir}/overlay/share/system/scx-lavd.conf %{buildroot}%{_unitdir}/scx.service.d/10-omageeko-lavd.conf
+
 %check
 # Every sudoers rule must parse
 for f in %{buildroot}%{_sysconfdir}/sudoers.d/*; do
@@ -348,6 +379,31 @@ done
 %{_datadir}/uwsm/env.d/20-omageeko-flatpak
 %dir %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d
 %config %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
+
+%post system
+# Apply now instead of at the next boot. zram0 and the services are started by
+# layer 08 (enabling units is a layer decision, not a package side effect).
+%{_sbindir}/sysctl --system >/dev/null 2>&1 || :
+systemd-tmpfiles --create --boot omarchy-zswap.conf omageeko-mglru.conf >/dev/null 2>&1 || :
+udevadm control --reload >/dev/null 2>&1 || :
+udevadm trigger --subsystem-match=block --action=change >/dev/null 2>&1 || :
+systemctl daemon-reload >/dev/null 2>&1 || :
+systemctl try-restart systemd-oomd.service scx.service >/dev/null 2>&1 || :
+
+%files system
+%dir %{_prefix}/lib/systemd/zram-generator.conf.d
+%{_prefix}/lib/systemd/zram-generator.conf.d/90-omarchy.conf
+%{_sysctldir}/99-omarchy-sysctl.conf
+%{_sysctldir}/90-omarchy-file-watchers.conf
+%dir %{_prefix}/lib/systemd/oomd.conf.d
+%{_prefix}/lib/systemd/oomd.conf.d/10-omarchy.conf
+%dir %{_userunitdir}/app.slice.d
+%{_userunitdir}/app.slice.d/10-oomd.conf
+%{_tmpfilesdir}/omarchy-zswap.conf
+%{_tmpfilesdir}/omageeko-mglru.conf
+%{_udevrulesdir}/60-omarchy-io-scheduler.rules
+%dir %{_unitdir}/scx.service.d
+%{_unitdir}/scx.service.d/10-omageeko-lavd.conf
 
 %post hardware
 # ddcutil i2c rule: apply to the existing devices without a reboot

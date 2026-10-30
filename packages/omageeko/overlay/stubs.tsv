@@ -19,3 +19,5 @@ omarchy-install-gaming-steam	layer 06	needs Tumbleweed Steam packages
 omarchy-install-gaming-retroarch	layer 06	needs Tumbleweed RetroArch packages
 omarchy-install-service-sunshine	layer 06	needs Tumbleweed Sunshine packages and firewalld
 omarchy-remove-service-sunshine	layer 06	needs Tumbleweed Sunshine packages and firewalld
+omarchy-kernel	n/a	Tumbleweed boots with systemd-boot (sdbootutil) and its stock kernel; linux-omarchy and its Limine boot order do not apply
+omarchy-apply-pacman	n/a	Tumbleweed uses zypper repositories

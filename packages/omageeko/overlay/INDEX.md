@@ -82,6 +82,8 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | `/usr/share/omageeko/tools/omageeko-bump` + `migrations.tsv` | the migration classifier (copied from `tools/` by prepare.sh), so omageeko-update gates migrations without a checkout |
 | `/usr/share/omageeko/lib/pkg.sh` | Arch-name translation for the pkg ports; `omageeko_flatpak_session_env` pushes Flatpak's export dirs into the running session after a Flatpak install (pkg-add, pkg-aur-install) |
 | `/usr/share/uwsm/env.d/20-omageeko-flatpak` (omageeko-session) | Flatpak export dirs in every session's XDG_DATA_DIRS: TW's profile.d/flatpak.sh is skipped when the login already read /etc/profile, or absent until flatpak is installed. Without it, Flatpak URL handlers (slack:// after a browser login) give "no apps available" |
+| `/usr/lib/tmpfiles.d/omageeko-mglru.conf` (omageeko-system) | multi-gen LRU on at boot: Omarchy's kernel enables it at build time (`CONFIG_LRU_GEN_ENABLED`), TW's builds it in but leaves it off |
+| `/usr/lib/systemd/system/scx.service.d/10-omageeko-lavd.conf` (omageeko-system) | sched_ext `scx_lavd --autopower` (TW's `scx` package) in place of the BORE patch in Omarchy's kernel; overrides via `SCX_*_OVERRIDE`, so `/etc/default/scx` stays untouched |
 
 ## Menu edits (`menu-transform.py`, run in %prep; fails on upstream drift)
 
@@ -107,7 +109,7 @@ Enabled on first use by `omarchy-pkg-add` for `@repo:<alias>:<rpm>` map targets:
 
 ## Stubs (`stubs.tsv`, generated at build)
 
-Not applicable: refresh-limine, refresh-pacman, upgrade-to-quattro, provision-owner, provision-hardware, dev-pkg-test, reinstall-pkgs.
+Not applicable: refresh-limine, refresh-pacman, upgrade-to-quattro, provision-owner, provision-hardware, dev-pkg-test, reinstall-pkgs, kernel (Limine default-kernel switcher for linux-omarchy; the stub lists no kernels, so Update › Kernel stays hidden), apply-pacman.
 
 Ported in later layers: system-factory-reset (06), plymouth-set (06), hibernation-* (07), setup/remove-security-sshd (07), install-gaming-steam/retroarch (08), install/remove-service-sunshine (06).
 
@@ -123,4 +125,5 @@ Ported in later layers: system-factory-reset (06), plymouth-set (06), hibernatio
 | `default/snapper/root` template | TW's installer already configures snapper |
 | `etc/docker/*`, docker drop-ins, `resolved.conf.d/20-docker-dns.conf` | podman |
 | `default/plymouth/*`, `etc/plymouth/*`, `etc/security/faillock.conf` | layer 06 |
-| `etc/sysctl.d/*`, `etc/systemd/{system,user,oomd,logind,resolved}.conf.d/*`, zram/zswap, udev, modprobe, NetworkManager, cups, sysusers, binfmt drop-ins, `environment.d` fcitx, `system-sleep/*` | layer 07 (system), each reviewed for TW |
+| `etc/systemd/{system,user,logind,resolved}.conf.d/*`, the other udev rules, NetworkManager, cups, sysusers, binfmt drop-ins, `environment.d` fcitx, `system-sleep/*` | layer 08 (system), each reviewed for TW. Already shipped by omageeko-system: zram-generator conf, `sysctl.d/99-omarchy-sysctl.conf` + `90-omarchy-file-watchers.conf`, `oomd.conf.d/10-omarchy.conf`, `app.slice.d/10-oomd.conf`, `tmpfiles.d/omarchy-zswap.conf`, `udev/rules.d/60-omarchy-io-scheduler.rules` (at TW's /usr/lib vendor paths) |
+| `etc/modprobe.d/omarchy-usb-autosuspend.conf` | decision: not a performance setting, and disabling USB autosuspend costs battery on the laptop |

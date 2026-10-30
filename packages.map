@@ -168,6 +168,7 @@ docker-buildx          -  -                                # podman build covers
 ufw                    08 firewalld                        # TW default firewall
 ufw-docker             -  -                                # firewalld + podman don't need it
 qemu-user-static-binfmt 08 qemu-linux-user                 # cross-arch containers
+zram-generator         08 zram-generator                   # upstream install/omarchy-other.packages; pulled in by omageeko-system
 
 # --- 05: hardware (names Omarchy's install/hardware scripts and setup commands pass to omarchy-pkg-add)
 libfprint-git          05 libfprint-2-2                    # Arch tracks libfprint git; TW's release supports this Goodix 27c6:6594
