@@ -31,7 +31,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-install-and-launch | Flathub-resolved packages launch with `flatpak run <id>` |
 | omarchy-pkg-flatpak-remove (new, from omaweed) | fzf picker removing system/user Flatpak apps (Remove › Flatpak) |
 | omarchy-pkg-opi-install (new, from omaweed) | opi search over OBS/Packman (Install › OPI) |
-| omarchy-theme-catalog (new) | Install › Style › Theme Catalog: omarchy.org community themes in the shell's image picker, labelled with the apps each styles (tree-only clones, no GitHub API) and their fit with openSUSE green / Rancher blue (accent hue), those first; installs through `omarchy-theme-install`. Index cached a week in `~/.cache/omageeko/theme-catalog` |
+| omarchy-theme-catalog (new) | Install › Style › Theme Catalog: omarchy.org community themes in the shell's image picker, labelled with the apps each styles (tree-only clones, no GitHub API), GitHub stars and release downloads (batched GraphQL through gh, when logged in); most apps first; installs through `omarchy-theme-install`. Index cached a week in `~/.cache/omageeko/theme-catalog` |
 | omarchy-hyprland-workspace-carousel (new, from omarchy-mac feature/workspace-carousel) | wrapping workspace cycle on the focused monitor; bound by host files (`docs/touchpad-and-mouse.md`) |
 | omarchy-hyprland-window-swap-columns (new) | swap a workspace's two columns in one step (dwindle swapsplit / row swaps, scrolling swapcol); bound by host files (`docs/desk-workspaces.md`) |
 | omarchy-update | thin wrapper: `exec omageeko-update` (upstream's pacman/AUR chain doesn't apply; `-y` accepted) |
