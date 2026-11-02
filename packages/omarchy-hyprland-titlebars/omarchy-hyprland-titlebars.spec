@@ -1,11 +1,11 @@
-# omageeko: port of omarchy-pkgs/pkgbuilds/omarchy-hyprland-titlebars (0.2.2-1)
+# omageeko: port of omarchy-pkgs/pkgbuilds/omarchy-hyprland-titlebars (0.3.0-2)
 # A Hyprland plugin only loads into the exact Hyprland it was built against:
 # rebuild this package whenever Tumbleweed updates hyprland.
 %global debug_package %{nil}
 %global hypr_ver %(rpm -q --qf '%%{VERSION}' hyprland-devel 2>/dev/null | grep -E '^[0-9.]+$' || echo 0)
 
 Name:           omarchy-hyprland-titlebars
-Version:        0.2.2
+Version:        0.3.0
 Release:        1.omageeko.h%{hypr_ver}%{?dist}
 Summary:        Titlebars for Omarchy's floating workspaces (Hyprland plugin)
 License:        BSD-3-Clause AND MIT
