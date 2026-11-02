@@ -84,13 +84,15 @@ zyp() { sudo env DISABLE_SNAPPER_ZYPP_PLUGIN=1 zypper "$@"; }
 
 # Rebuild stale omageeko packages in the builder container, printing each one
 # as it starts; sets `built` (space-separated) and returns the build status
+# rebuild_packages [log name] : the stage 1 pre-build keeps its own log, so a
+# failing stage 2 rebuild does not overwrite the error that blocked the dup
 rebuild_packages() {
-  local packages status
+  local packages status out="$state_dir/${1:-build}.out"
   mapfile -t packages < <(cd "$source_dir/packages" && ls -d -- */ | tr -d /)
   (cd "$source_dir" && bash -c 'source lib/common.sh && check_builder_snapshot && build_packages "$@"' _ "${packages[@]}") 2>&1 |
-    tee "$state_dir/build.out" | sed -u -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building \(.*\)/      building \1…/p'
+    tee "$out" | sed -u -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building \(.*\)/      building \1…/p'
   status=${PIPESTATUS[0]}
-  built=$(sed -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building //p' "$state_dir/build.out" | awk '!seen[$0]++' | tr '\n' ' ')
+  built=$(sed -n 's/\x1b\[[0-9;]*m//g; s/^\[omageeko\] Building //p' "$out" | awk '!seen[$0]++' | tr '\n' ' ')
   rebuild_count=${#packages[@]}
   return "$status"
 }
@@ -169,11 +171,11 @@ if [[ $published_snapshot =~ ^[0-9]{8}$ ]] && ((published_snapshot > installed_s
     # Packages built against Qt/Hyprland internals (quickshell, the titlebars
     # plugin…) block the dup unless their rebuild comes in the same transaction
     step "Pre-building omageeko packages for $published_snapshot (Qt/Hyprland ABI)"
-    if OMAGEEKO_TARGET_SNAPSHOT=$published_snapshot rebuild_packages; then
+    if OMAGEEKO_TARGET_SNAPSHOT=$published_snapshot rebuild_packages prebuild; then
       prebuilt=1
       result_line "${built:+rebuilt: $built}${built:-nothing to rebuild}"
     else
-      result_line "pre-build failed (see $state_dir/build.out); the dup may need a decision"
+      result_line "pre-build failed (see $state_dir/prebuild.out); the dup may need a decision"
     fi
   fi
 fi
