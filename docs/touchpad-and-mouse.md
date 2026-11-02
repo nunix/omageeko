@@ -4,15 +4,13 @@ Ported from the `feature/workspace-carousel` and `personal/mx2` branches of nuni
 
 ## Workspace carousel
 
-`omarchy-hyprland-workspace-carousel <left|right>` (in the omageeko RPM) cycles the focused monitor's workspaces:
+`omarchy-hyprland-workspace-carousel <left|right>` (in the omageeko RPM) cycles the focused monitor's own workspaces (Omarchy 4.5 gives each monitor its own 1-10, see `desk-workspaces.md`):
 
-- the occupied workspaces 1-5 on that monitor,
-- plus the first free one after them (ids already living on another monitor are skipped, so focus never jumps to another screen),
+- the occupied ones on that monitor,
+- plus the first free one after them, up to 10,
 - wrapping around at both ends.
 
-With windows on 1 and 3, `right` goes 1 → 3 → 4 → 1.
-
-When the screen has pinned workspaces (persistent rules, see `desk-workspaces.md`), it cycles exactly those (plus occupied 1-5 there) and adds no free slot.
+With windows on 1 and 3, `right` goes 1 → 3 → 4 → 1. It focuses through `o.workspaces.focus`, like `Super + <n>`, so focus never jumps to another screen.
 
 ## MX thumb wheel (`bindings.lua`)
 

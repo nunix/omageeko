@@ -1,11 +1,18 @@
 #!/bin/bash
 
-# omarchy:summary=Cycle through the focused monitor's pinned workspaces, or its occupied 1-5 plus the next free one
+# omarchy:summary=Cycle through the focused monitor's occupied workspaces plus the next free one, up to 10
 # omarchy:args=<left|right>
 # omarchy:hidden=true
 # omageeko: ported from nunix/omarchy-mac feature/workspace-carousel. Bound to
 # the MX thumb wheel and 3-finger swipes in the host configs. Wraps around, so
 # the wheel never stalls on an edge or jumps to a far empty workspace.
+#
+# Since Omarchy 4.5 every monitor has workspaces 1-10 of its own, numbered by
+# Hyprland in a block of ten per monitor (default/hypr/monitor-workspaces.lua).
+# The carousel works in slots of the focused monitor's block and focuses them
+# through o.workspaces.focus, like Super + <n> and the bar.
+
+slots=10
 
 case ${1:-} in
 left) step=-1 ;;
@@ -20,46 +27,46 @@ active_json=$(hyprctl activeworkspace -j) || exit 1
 active=$(jq -r '.id' <<<"$active_json")
 monitor=$(jq -r '.monitor' <<<"$active_json")
 
-workspaces=$(hyprctl workspaces -j)
-mapfile -t occupied < <(jq -r --arg monitor "$monitor" \
-  '[.[] | select(.monitor == $monitor and .id >= 1 and .id <= 5 and .windows > 0) | .id] | sort | .[]' <<<"$workspaces")
-# Ids living on other monitors: focusing them would jump to that screen
-mapfile -t elsewhere < <(jq -r --arg monitor "$monitor" '.[] | select(.monitor != $monitor) | .id' <<<"$workspaces")
+# The monitor's block, from the file Hyprland keeps them in; until it exists,
+# the block of the workspace it shows
+state=${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/monitor-workspaces
+block=$(awk -F '\t' -v monitor="$monitor" '$2 == monitor { print $1; exit }' "$state" 2>/dev/null)
+if [[ -z $block ]]; then
+  ((active >= 1)) || exit 0
+  block=$(((active - 1) / slots))
+fi
+base=$((block * slots))
 
-# Workspaces pinned to this monitor (persistent workspace rules): cycle exactly
-# those (plus occupied 1-5 here) instead of adding a free slot
-mapfile -t pinned < <(jq -r --arg monitor "$monitor" \
-  '[.[] | select(.monitor == $monitor and .ispersistent and .id >= 1) | .id] | sort | .[]' <<<"$workspaces")
+# Slots of this block on this monitor that hold windows
+mapfile -t occupied < <(hyprctl workspaces -j | jq -r --arg monitor "$monitor" --argjson base "$base" --argjson slots "$slots" \
+  '[.[] | select(.monitor == $monitor and .id > $base and .id <= $base + $slots and .windows > 0) | .id - $base] | sort | .[]')
 
 max=0
-for id in "${occupied[@]}"; do
-  ((id > max)) && max=$id
+for slot in "${occupied[@]}"; do
+  ((slot > max)) && max=$slot
 done
 
-candidates=("${occupied[@]}" "${pinned[@]}")
-if ((${#pinned[@]} == 0)); then
-  for ((id = max + 1; id <= 5; id++)); do
-    [[ " ${elsewhere[*]} " == *" $id "* ]] && continue
-    candidates+=("$id")
-    break
-  done
+candidates=("${occupied[@]}")
+((max < slots)) && candidates+=($((max + 1)))
+active_slot=0
+if ((active > base && active <= base + slots)); then
+  active_slot=$((active - base))
+  candidates+=("$active_slot")
 fi
-((active >= 1 && (active <= 5 || ${#pinned[@]} > 0))) && candidates+=("$active")
-((${#candidates[@]})) || candidates=(1)
 mapfile -t candidates < <(printf '%s\n' "${candidates[@]}" | sort -n -u)
 
 index=-1
 for i in "${!candidates[@]}"; do
-  [[ ${candidates[i]} == "$active" ]] && index=$i
+  [[ ${candidates[i]} == "$active_slot" ]] && index=$i
 done
 
 count=${#candidates[@]}
 if ((index < 0)); then
-  # Active workspace outside 1-5 (special or high-numbered): enter at an edge
+  # Showing a special or visiting workspace: enter the block at an edge
   ((step > 0)) && next=${candidates[0]} || next=${candidates[count - 1]}
 else
   next=${candidates[(index + step + count) % count]}
 fi
 
-[[ $next == "$active" ]] && exit 0
-hyprctl eval "hl.dispatch(hl.dsp.focus({ workspace = \"$next\" }))" >/dev/null
+[[ $next == "$active_slot" ]] && exit 0
+hyprctl dispatch "o.workspaces.focus($next, \"$monitor\")" >/dev/null

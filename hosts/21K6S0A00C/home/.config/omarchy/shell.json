@@ -14,7 +14,8 @@
           "id": "omarchy.menu"
         },
         {
-          "id": "omarchy.workspaces"
+          "id": "omarchy.workspaces",
+          "count": 10
         }
       ],
       "center": [

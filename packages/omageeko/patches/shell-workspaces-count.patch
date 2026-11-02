@@ -1,0 +1,21 @@
+--- a/shell/plugins/bar/widgets/Workspaces.qml	2026-10-29 12:45:47.269240673 +0100
++++ b/shell/plugins/bar/widgets/Workspaces.qml	2026-10-29 12:45:47.278855733 +0100
+@@ -75,12 +75,17 @@
+     return null
+   }
+ 
++  // omageeko: how many of the monitor's own are always listed, from the
++  // widget's "count" setting (1-10, upstream's five by default).
++  readonly property int shownSlots: Util.clamp(Number(setting("count", 5)) || 5, 1, root.slots)
++
+   // The first five of the monitor's own, and any of the rest that exist. After
+   // them come workspaces that are only visiting: those of a monitor that is
+   // unplugged, which had no room to join this one's.
+   function workspaceIds() {
+     var base = root.block * root.slots
+-    var ids = [base + 1, base + 2, base + 3, base + 4, base + 5]
++    var ids = []
++    for (var slot = 1; slot <= root.shownSlots; slot++) ids.push(base + slot)
+     var guests = []
+     var values = Hyprland.workspaces.values
+ 

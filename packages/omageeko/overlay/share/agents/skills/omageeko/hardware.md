@@ -13,7 +13,7 @@ Machine-specific user files live in the checkout under `hosts/<DMI product name>
 
 ## Monitors
 
-- The layout is in the host file `~/.config/hypr/monitors.lua`. It also pins workspaces per screen as persistent rules (see `~/omageeko/docs/desk-workspaces.md`).
+- The layout is in the host file `~/.config/hypr/monitors.lua`. Workspaces are per screen since Omarchy 4.5 (each its own 1-10), so it pins none; see `~/omageeko/docs/desk-workspaces.md`.
 - Some monitors stay dark after deep standby (Samsung Odyssey G9). `omageeko-monitor-wake-kick` (user service) cycles DPMS on the monitors listed in `~/.config/omageeko/monitor-wake-kick` when Hyprland re-adds them. `omageeko-monitor-wake-kick --kick-now` runs a cycle by hand.
 - Hyprland's Lua config rejects `hyprctl keyword`; use `hyprctl eval '…'` and `hl.dsp.*` dispatchers.
 - Validate config changes: `hyprctl configerrors` (live), or `Hyprland --verify-config` through a wrapper that stubs `hl.timer` (it segfaults on it).

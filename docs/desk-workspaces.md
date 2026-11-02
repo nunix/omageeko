@@ -2,19 +2,13 @@
 
 Host configs in `hosts/21K6S0A00C/home/.config/hypr/`; layer 05 copies them into `~/.config/hypr/`.
 
-## Workspaces pinned per screen (`monitors.lua`)
+## Workspaces per screen (Omarchy 4.5)
 
-| Screen | Position | Workspaces |
-|---|---|---|
-| DP-8 | left | 1, 4 |
-| DP-9 | center | 2, 5 |
-| HDMI-A-1 | right | 3, 6 |
+Since Omarchy 4.5 every screen has workspaces 1-10 of its own (`default/hypr/monitor-workspaces.lua`). Hyprland numbers them in a block of ten per screen, assigned once per physical monitor in `~/.local/state/omarchy/monitor-workspaces`: HDMI-A-1 got 1-10, DP-8 11-20, DP-9 21-30. Each bar shows its screen's block as 1-10 (the `count` setting on `omarchy.workspaces` in the host `shell.json`, an omageeko patch; upstream lists 1-5 plus any higher ones in use), and `Super + <n>` goes to workspace *n* of the focused screen.
 
-Each is a persistent workspace rule bound to its screen, so all six always exist and the bar shows 1-6. `Super + <n>` and window rules sending an app to workspace *n* always land on the same screen. Each screen starts on its lower number. With only the laptop panel on, Hyprland puts all six there.
+The host `monitors.lua` used to pin 1/4 to DP-8, 2/5 to DP-9 and 3/6 to HDMI-A-1 as persistent workspace rules. Under 4.5 that showed workspaces twice in the bars (ids 1-6 all belong to HDMI-A-1's block, so its bar listed them, and the other bars listed theirs as visitors), so the rules are gone (2026-10-29). Upstream has no switch to turn per-screen workspaces off.
 
-Hyprland applies the rules on config reload too, so installing the file while working moves existing workspaces to their screens.
-
-The workspace carousel (MX thumb wheel, 3-finger swipe; see `touchpad-and-mouse.md`) cycles the focused screen's pinned pair, e.g. 1 ↔ 4 on DP-8.
+The workspace carousel (MX thumb wheel, 3-finger swipe; see `touchpad-and-mouse.md`) cycles the focused screen's own workspaces.
 
 ## Swap columns (`bindings.lua`)
 

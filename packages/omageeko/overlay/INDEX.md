@@ -32,7 +32,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omarchy-pkg-flatpak-remove (new, from omaweed) | fzf picker removing system/user Flatpak apps (Remove › Flatpak) |
 | omarchy-pkg-opi-install (new, from omaweed) | opi search over OBS/Packman (Install › OPI) |
 | omarchy-theme-catalog (new) | Install › Style › Theme Catalog: omarchy.org community themes in the shell's image picker, labelled with the apps each styles (tree-only clones, no GitHub API), GitHub stars and age of the last commit on the default branch (batched GraphQL through gh, when logged in); most apps first; installs through `omarchy-theme-install`. Index cached a week in `~/.cache/omageeko/theme-catalog` |
-| omarchy-hyprland-workspace-carousel (new, from omarchy-mac feature/workspace-carousel) | wrapping workspace cycle on the focused monitor; bound by host files (`docs/touchpad-and-mouse.md`) |
+| omarchy-hyprland-workspace-carousel (new, from omarchy-mac feature/workspace-carousel) | wrapping workspace cycle within the focused monitor's own workspaces (4.5 per-monitor blocks); bound by host files (`docs/touchpad-and-mouse.md`) |
 | omarchy-hyprland-window-swap-columns (new) | swap a workspace's two columns in one step (dwindle swapsplit / row swaps, scrolling swapcol); bound by host files (`docs/desk-workspaces.md`) |
 | omarchy-update | thin wrapper: `exec omageeko-update` (upstream's pacman/AUR chain doesn't apply; `-y` accepted) |
 | omageeko-update (new) | three stages, each runs regardless of the previous: Tumbleweed (`zypper dup` from openSUSE/Packman repos) → omageeko (gated upstream bump, rebuilt RPMs, mise + `mise up`, gated migrations) → apps (vendor repos, Flatpak, box); applies right away and reports reboot need (Aeon style). See `UPDATE-PLAN.md` |
@@ -61,6 +61,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | shell monitor Panel.qml + default/hypr/toggles.lua | displays switched off in the panel stay off for the session (`$XDG_RUNTIME_DIR/omarchy-disabled-monitors`) |
 | omarchy-default-browser | `brave` checks for the `brave-browser` command (Brave's RPM; Arch's brave-bin ships `brave`), so Setup › Defaults › Browser › Brave no longer opens an install terminal |
 | shell clipboard ClipboardHistory.js + Clipboard.qml | pinned entries (Ctrl+P): listed first with a pin mark, not trimmed by the 500-entry limit, kept by Shift+Delete (clear); history saved whole since addEntry bounds unpinned entries |
+| shell bar Workspaces.qml | `count` setting on the `omarchy.workspaces` widget (1-10, default 5): how many of the monitor's own workspaces are always listed; the host `shell.json` sets 10 |
 | shell menu BarWidget.qml | bar menu button draws U+E900 from the `omageeko` icon font (omageeko logo) instead of the `omarchy` font |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
 

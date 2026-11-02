@@ -27,7 +27,7 @@
 -- o.bind("SUPER + H", nil, "voxtype record toggle")
 -- o.bind("SUPER + PERIOD", nil, { panel = "omarchy.emojis" })
 
--- omageeko (21K6S0A00C): MX thumb wheel cycles this monitor's workspaces 1-5,
+-- omageeko (21K6S0A00C): MX thumb wheel cycles this monitor's workspaces 1-10,
 -- wrapping around, plus one free workspace (see docs/touchpad-and-mouse.md).
 -- These capture horizontal scrolling everywhere; use "SUPER + mouse_left" /
 -- "SUPER + mouse_right" instead to keep it in apps.
