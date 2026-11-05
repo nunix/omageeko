@@ -1,8 +1,8 @@
-# omageeko: port of omarchy-pkgs/pkgbuilds/owe (0.2.12-1) and owe-lockfeed (0.2.12-1)
+# omageeko: port of omarchy-pkgs/pkgbuilds/owe (0.2.13-1) and owe-lockfeed (0.2.13-1)
 %global debug_package %{nil}
 
 Name:           owe
-Version:        0.2.12
+Version:        0.2.13
 Release:        1.omageeko%{?dist}
 Summary:        High-performance wallpaper engine for Omarchy (mp4, gif, stills)
 License:        MIT

@@ -1,9 +1,9 @@
-# omageeko: port of omarchy-pkgs/pkgbuilds/omasnap (1.24.0-1)
+# omageeko: port of omarchy-pkgs/pkgbuilds/omasnap (1.25.0-1)
 %global debug_package %{nil}
 %define __builder ninja
 
 Name:           omasnap
-Version:        1.24.0
+Version:        1.25.0
 Release:        1.omageeko%{?dist}
 Summary:        Native Wayland screenshot and annotation overlay for Hyprland
 License:        MIT AND OFL-1.1

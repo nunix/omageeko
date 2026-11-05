@@ -1,14 +1,17 @@
-# omageeko: port of omarchy-pkgs/pkgbuilds/hyprland-preview-share-picker (0.2.1-3)
+# omageeko: port of omarchy-pkgs/pkgbuilds/hyprland-preview-share-picker (0.3.0.r3.g07602ef-1)
 %global debug_package %{nil}
+# v0.3.0 plus WhySoBad/hyprland-preview-share-picker#30 (shm pool sizing)
+%global commit 07602efe7a65dcef5399e22c162edf9fc331c46d
+%global shortcommit %(c=%{commit}; echo ${c:0:7})
 %global protocols_commit 3a5c2bda1c1a4e55cc1330c782547695a93f05b2
 
 Name:           hyprland-preview-share-picker
-Version:        0.2.1
-Release:        3.omageeko%{?dist}
+Version:        0.3.0^3.g%{shortcommit}
+Release:        1.omageeko%{?dist}
 Summary:        Alternative Hyprland screen share picker with window and monitor previews
 License:        MIT
 URL:            https://github.com/WhySoBad/hyprland-preview-share-picker
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        %{url}/archive/%{commit}.tar.gz#/%{name}-%{commit}.tar.gz
 Source1:        https://github.com/hyprwm/hyprland-protocols/archive/%{protocols_commit}.tar.gz#/hyprland-protocols-%{protocols_commit}.tar.gz
 BuildRequires:  cargo
 BuildRequires:  rust
@@ -23,13 +26,13 @@ Screen share picker for xdg-desktop-portal-hyprland showing live previews of
 windows and monitors. Omarchy sets it as custom_picker_binary in xdph.conf.
 
 %prep
-%autosetup -p1 -a1
+%autosetup -p1 -a1 -n %{name}-%{commit}
 rmdir lib/hyprland-protocols 2>/dev/null || rm -rf lib/hyprland-protocols
 ln -s ../hyprland-protocols-%{protocols_commit} lib/hyprland-protocols
 # build.rs shells out to git for the version string; there is no git checkout here
 cat > build.rs <<'RS'
 fn main() {
-    println!("cargo::rustc-env=GIT_VERSION=v%{version}-r0-release");
+    println!("cargo::rustc-env=GIT_VERSION=v0.3.0-r3-g%{shortcommit}");
 }
 RS
 

@@ -1,4 +1,4 @@
-# omageeko: port of omarchy-pkgs/pkgbuilds/openclaw (2026.10.7-1)
+# omageeko: port of omarchy-pkgs/pkgbuilds/openclaw (2026.10.10-1)
 # This is the release Omarchy ships, not the OpenClaw that runs: a copy in /usr
 # belongs to rpm, and `openclaw update` refuses to write there.
 # omarchy-install-openclaw-cli seeds a copy under ~/.openclaw from this tarball
@@ -7,7 +7,7 @@
 %global __os_install_post %{nil}
 
 Name:           openclaw
-Version:        2026.10.7
+Version:        2026.10.10
 Release:        1.omageeko%{?dist}
 Summary:        Multi-channel AI gateway with extensible messaging integrations
 License:        MIT
