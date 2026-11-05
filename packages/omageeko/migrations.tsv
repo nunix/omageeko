@@ -7,3 +7,4 @@
 1791554699.sh	skip	ARM CPPC power-profiles-daemon swap via pacman; TW's power-profiles-daemon is installed, so it would fire and fail
 1791621765.sh	skip	mkinitcpio/limine-mkinitcpio vconsole rebuild; omageeko builds the initrd with dracut
 1792965062.sh	skip	limine resume.conf + mkinitcpio resume hook only; omarchy-hibernation-setup is stubbed on omageeko
+1793667581.sh	skip	only sets up Superwhisper, which omageeko doesn't ship (packages.map: superwhisper-bin -> -)

@@ -291,12 +291,14 @@ if [[ -x $classify ]]; then
   done
   held=$(jq -r 'to_entries[] | select(.value | startswith("arch:")) | .key' <<<"$pending" | tr '\n' ' ')
 fi
-count=$(jq 'length' <<<"$pending")
+# omageeko: the skips above are already marked done; only the rest still runs
+skipped=$(jq '[.[] | select(. == "skip" or . == "hw-noop")] | length' <<<"$pending")
+count=$(jq '[.[] | select(. != "skip" and . != "hw-noop")] | length' <<<"$pending")
 if [[ -n ${held// /} ]]; then
   result_line "held: Arch-only and undecided: $held"
   omageeko_notes+=("migrations held (Arch-only, undecided): $held- see docs/bump-runbook.md#migration-arch")
 elif ((count == 0)); then
-  result_line "none pending"
+  if ((skipped > 0)); then result_line "$skipped skipped (migrations.tsv)"; else result_line "none pending"; fi
 elif {
   # omageeko: as upstream omarchy-update (4.5.0): migrations call the shell
   # over IPC, so restart a shell still running the code stage 2 replaced

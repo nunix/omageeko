@@ -512,6 +512,8 @@ def cmd_ack(args):
 
 def cmd_decide(args):
     name, decision, reason = args[0], args[1], " ".join(args[2:])
+    # Decisions are keyed by file name; the runbook's examples leave .sh off
+    name = Path(name).name if name.endswith(".sh") else Path(name).name + ".sh"
     if decision not in ("run", "skip", "patched"):
         raise SystemExit("decision must be run, skip or patched")
     lines = MIGRATION_DECISIONS.read_text().splitlines() if MIGRATION_DECISIONS.exists() else \
