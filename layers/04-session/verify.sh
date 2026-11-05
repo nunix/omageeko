@@ -33,6 +33,11 @@ else
   bad "Hyprland --verify-config exit $verify_status: $(sed -n '/parsing result/,$p' <<<"$verify_out" | tail -n +2 | head -3 | tr '\n' ' ')"
 fi
 check "only omarchy-fcitx5.service starts fcitx5 (~/.i18n INPUT_METHOD=none)" grep -q "^export INPUT_METHOD=none" ~/.i18n
+check "session restore: command on PATH" command -v omageeko-session-restore
+check "session restore: status parses" bash -c 'omageeko-session-restore status --json | jq -e .state >/dev/null'
+check "session restore: saved before reboot (omarchy-system patched)" grep -q omageeko-session-restore "$(command -v omarchy-system)"
+check "session restore: autosave timer enabled" systemctl --user is-enabled -q omageeko-session-restore-save.timer
+check "session restore: login offer enabled" systemctl --user is-enabled -q omageeko-session-restore-offer.service
 check "~/.bashrc sources Omarchy" grep -q 'default/bash/rc' ~/.bashrc
 patterns=$(grep -v '^#' "$OMAGEEKO_ROOT/layers/04-session/carryover.patterns" | grep -v '^$')
 if [[ -z $patterns ]] || grep -qEf <(echo "$patterns") ~/.bashrc; then ok "carry-over lines present in ~/.bashrc"; else bad "carry-over lines missing from ~/.bashrc"; fi

@@ -28,6 +28,9 @@ INSERT = [
     # community themes from omarchy.org with their app count, omageeko colours first
     ("install.style.theme", "install.style.catalog", {"icon": "\U000f03d8", "label": "Theme Catalog",
         "action": "omarchy-theme-catalog"}),
+    # session restore card (restore, save now, the "Restore at login" switch), before Logout
+    ("system.hibernate", "system.session", {"icon": "\U000f006f", "label": "Session",
+        "action": "omarchy-shell shell toggle omageeko.session-restore"}),
 ]
 # translated labels to override in every language that defines them (brand names)
 I18N_LABELS = {"install.aur": "Flathub", "update.omarchy": "Omageeko"}

@@ -77,11 +77,17 @@ Summary:        Omarchy Hyprland session managed by uwsm
 Requires:       %{name} = %{version}-%{release}
 Requires:       uwsm
 Requires:       hyprland
+# omageeko-session-restore: Python, its login notification and the default browser lookup
+Requires:       /usr/bin/python3
+Requires:       libnotify-tools
+Requires:       xdg-utils
 
 %description    session
 The "Omarchy (Hyprland uwsm)" Wayland session for display managers, the uwsm
 environment file that sets OMARCHY_PATH/PATH/TERMINAL/EDITOR for the session,
-and the systemd drop-in that keeps the shell alive across compositor exits.
+the systemd drop-in that keeps the shell alive across compositor exits, and
+session restore: the apps open at a reboot reopen on their workspaces
+(omageeko-session-restore, its autosave timer and login offer).
 
 %package        hardware
 Summary:        omageeko hardware integration for Tumbleweed laptops
@@ -273,6 +279,10 @@ install -Dm644 default/uwsm/env.d/10-omarchy %{buildroot}%{_datadir}/uwsm/env.d/
 install -Dm644 %{_sourcedir}/overlay/share/uwsm/20-omageeko-flatpak %{buildroot}%{_datadir}/uwsm/env.d/20-omageeko-flatpak
 install -Dm644 etc/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf \
   %{buildroot}%{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
+# Session restore (docs/session-restore.md); omageeko-session-restore itself comes from overlay/bin
+for unit in omageeko-session-restore-offer.service omageeko-session-restore-save.service omageeko-session-restore-save.timer; do
+  install -Dm644 %{_sourcedir}/overlay/share/systemd/$unit %{buildroot}%{_userunitdir}/$unit
+done
 
 # ---- omageeko-hardware (layer 05)
 install -Dm644 %{_sourcedir}/overlay/share/wireplumber/60-omageeko-ucm-labels.conf \
@@ -367,6 +377,7 @@ done
 %{_datadir}/applications/mimeapps.list
 %{_datadir}/applications/chromium.desktop
 %{_userunitdir}/*.service
+%exclude %{_userunitdir}/omageeko-session-restore-*
 %{_datadir}/fonts/omarchy/
 %{_datadir}/fonts/omageeko/
 %{_datadir}/pixmaps/omarchy.png
@@ -379,6 +390,10 @@ done
 %{_datadir}/uwsm/env.d/20-omageeko-flatpak
 %dir %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d
 %config %{_sysconfdir}/systemd/user/wayland-wm@hyprland.desktop.service.d/10-keep-shell.conf
+%{_bindir}/omageeko-session-restore
+%{_userunitdir}/omageeko-session-restore-offer.service
+%{_userunitdir}/omageeko-session-restore-save.service
+%{_userunitdir}/omageeko-session-restore-save.timer
 
 %post system
 # Apply now instead of at the next boot. zram0 and the services are started by

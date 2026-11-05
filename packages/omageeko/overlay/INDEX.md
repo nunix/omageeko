@@ -39,6 +39,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | omageeko-link-skills (new) | links `/usr/share/omageeko/agents/skills/omageeko` into the agent skill dirs Omarchy uses (+ opencode) |
 | omarchy-hyprland-window-equalize-splits (new) | reset the workspace's dwindle splits to even halves, recursively, from window geometry (Hyprland 0.56 `splitratio` only takes a delta); bound to Super+\\ in the host bindings |
 | omarchy-snapshot | create: snapper (all configs), no inline `cleanup` (left to snapper-cleanup.timer; inline it waited on btrfs quotas). restore: guides through the systemd-boot snapshot entry, then `snapper rollback` |
+| omageeko-session-restore (new, omageeko-session) | session restore (`docs/session-restore.md`): `save` records app windows (class, launcher, workspace, monitor identity + connector) to `~/.local/state/omageeko/session.json`; `restore` relaunches and moves each new window onto its workspace via Hyprland's event socket: own workspace when the monitor fingerprint matches, else the same number on the main monitor. Browser windows come back through the browser's own session restore and are matched by title; Chromium `--app` web apps are matched to their `omarchy-launch-webapp` launcher by class. Terminals and `org.omarchy.*` windows are skipped |
 
 ## Patches (`patches/`, applied with `--fuzz=0`)
 
@@ -64,6 +65,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | shell bar Workspaces.qml | `count` setting on the `omarchy.workspaces` widget (1-10, default 5): how many of the monitor's own workspaces are always listed; the host `shell.json` sets 10 |
 | shell menu BarWidget.qml | bar menu button draws U+E900 from the `omageeko` icon font (omageeko logo) instead of the `omarchy` font |
 | omarchy-mise-install | keep an existing `~/.local/bin/<cmd>` that isn't an Omarchy mise wrapper (e.g. a native Claude Code symlink) instead of replacing it |
+| omarchy-system | before closing windows, `omageeko-session-restore save --exit` (bounded 8 s): saves the session and SIGTERMs the browser so it keeps every window and exits cleanly (window-by-window closing left Chromium only the last window and a `Crashed` exit) |
 
 ## Added files (`overlay/share/`)
 
@@ -85,6 +87,8 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | `/usr/share/uwsm/env.d/20-omageeko-flatpak` (omageeko-session) | Flatpak export dirs in every session's XDG_DATA_DIRS: TW's profile.d/flatpak.sh is skipped when the login already read /etc/profile, or absent until flatpak is installed. Without it, Flatpak URL handlers (slack:// after a browser login) give "no apps available" |
 | `/usr/lib/tmpfiles.d/omageeko-mglru.conf` (omageeko-system) | multi-gen LRU on at boot: Omarchy's kernel enables it at build time (`CONFIG_LRU_GEN_ENABLED`), TW's builds it in but leaves it off |
 | `/usr/lib/systemd/system/scx.service.d/10-omageeko-lavd.conf` (omageeko-system) | sched_ext `scx_lavd --autopower` (TW's `scx` package) in place of the BORE patch in Omarchy's kernel; overrides via `SCX_*_OVERRIDE`, so `/etc/default/scx` stays untouched |
+| `omageeko-session-restore-{offer.service,save.service,save.timer}` user units (omageeko-session) | login offer (notification, or straight restore with the "Restore at login" switch on) and a 5-minute autosave for power cuts; enabled by layer 04 |
+| `shell/plugins/omageeko-session-restore/` (bar widget `omageeko.session-restore`, from `overlay/shell/`) | restore button between weather and the update button, shown only while a saved session waits, restores or came back incomplete; right click opens the card with the "Restore at login" switch, Save now, Dismiss and the log |
 
 ## Menu edits (`menu-transform.py`, run in %prep; fails on upstream drift)
 
@@ -96,6 +100,7 @@ Every upstream file omageeko changes, replaces, stubs or deliberately leaves out
 | update.omarchy | label "Omageeko" (all translations), icon from the `omageeko` font: runs omageeko-update |
 | shell string `bar.pendingUpdates` | "Omarchy" → "Omageeko" inside every translation (bar update button tooltip: "Pending Omageeko Updates") |
 | update.channel.rc, update.channel.edge | dropped (omageeko: Stable = pinned upstream, Dev = linked checkout) |
+| system.session | inserted before Logout: opens the session restore card (`omarchy-shell shell toggle omageeko.session-restore`) |
 
 ## Vendor repositories (`overlay/share/repos.tsv` → /usr/share/omageeko/repos.tsv)
 

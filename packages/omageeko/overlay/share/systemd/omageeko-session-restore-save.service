@@ -1,0 +1,8 @@
+[Unit]
+Description=omageeko: save the open apps and their workspaces
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/omageeko-session-restore save --auto

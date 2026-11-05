@@ -1,0 +1,14 @@
+--- a/bin/omarchy-system
++++ b/bin/omarchy-system
+@@ -49,6 +49,11 @@
+     omarchy-state clear re*-required
+   fi
+ 
++  # omageeko: remember the open apps and their workspaces for session restore,
++  # and quit the browser as a whole so it keeps every window (closing them one
++  # by one leaves it only the last). Bounded, so a hang can't block the exit.
++  timeout 8s omageeko-session-restore save --exit || true
++
+   # Proceed as soon as apps exit, with a bound for unresponsive windows.
+   timeout 2s omarchy-hyprland-window-close-all --wait
+   "${command[@]}"

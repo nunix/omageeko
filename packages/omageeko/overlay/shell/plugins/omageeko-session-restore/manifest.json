@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "omageeko.session-restore",
+  "name": "Session restore",
+  "version": "1.0.0",
+  "author": "omageeko",
+  "description": "Puts the apps open before a reboot back on their workspaces",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Session restore",
+    "description": "Restore the apps open before a reboot on their workspaces",
+    "category": "System",
+    "allowMultiple": false
+  }
+}

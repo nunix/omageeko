@@ -1,0 +1,12 @@
+[Unit]
+Description=omageeko: offer to restore the apps open before the last reboot
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+# Waits on the notification's Restore / Dismiss, so it must not block the session
+Type=exec
+ExecStart=/usr/bin/omageeko-session-restore offer
+
+[Install]
+WantedBy=graphical-session.target

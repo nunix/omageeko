@@ -1,0 +1,11 @@
+[Unit]
+Description=omageeko: save the open apps every 5 minutes (power cuts, hard resets)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Timer]
+OnActiveSec=5min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=graphical-session.target

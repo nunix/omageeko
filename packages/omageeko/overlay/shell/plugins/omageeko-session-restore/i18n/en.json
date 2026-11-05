@@ -1,0 +1,18 @@
+{
+  "title": "Session restore",
+  "tooltip.pending": "Restore %1 · saved %2",
+  "tooltip.restoring": "Restoring the saved session…",
+  "tooltip.partial": "Session restore incomplete",
+  "windows": { "one": "%1 window", "other": "%1 windows" },
+  "saved": "Saved %1",
+  "nothingSaved": "Nothing saved yet",
+  "sameMonitors": "Same monitors: every window goes back to its own screen",
+  "monitorsChanged": "Monitors changed: everything opens on %1",
+  "notPlaced": "Not placed: %1",
+  "auto.label": "Restore at login",
+  "auto.description": "Reopen the saved apps at login without asking",
+  "action.restore": "Restore",
+  "action.save": "Save now",
+  "action.dismiss": "Dismiss",
+  "action.log": "Log"
+}

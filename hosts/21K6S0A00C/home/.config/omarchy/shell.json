@@ -36,6 +36,9 @@
           "id": "omarchy.weather"
         },
         {
+          "id": "omageeko.session-restore"
+        },
+        {
           "id": "omarchy.system-update"
         }
       ],

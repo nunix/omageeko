@@ -1,0 +1,835 @@
+#!/usr/bin/python3 -I
+
+# omarchy:summary=Save the open apps and their workspaces, and put them back after a reboot
+# omarchy:args=<save|restore|offer|status|dismiss|auto> [options]
+# omarchy:hidden=true
+# omageeko: session restore (docs/session-restore.md). `save` records every app
+# window with its workspace and the monitor layout; `restore` relaunches the
+# apps and moves each new window onto its workspace. With the same monitors
+# every window goes back where it was; otherwise each goes to the same
+# workspace number (1-10) on the main monitor. Brave and its web apps share
+# one process, so windows are told apart by class: `brave-browser` windows are
+# reopened by Brave's own "Continue where you left off" and matched by title,
+# web apps (`brave-<host>_<path>-Default`) by their launcher's URL.
+
+import json
+import os
+import re
+import shlex
+import signal
+import socket
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+from urllib.parse import urlsplit
+
+HOME = Path.home()
+STATE_DIR = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state") / "omageeko"
+SESSION = STATE_DIR / "session.json"
+LOG = STATE_DIR / "session-restore.log"
+CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config") / "omageeko"
+CONF = CONFIG_DIR / "session.conf"
+EXCLUDE = CONFIG_DIR / "session-exclude"
+BLOCKS = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state") / "omarchy/monitor-workspaces"
+RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}") / "omageeko-session-restore"
+SLOTS = 10
+VERSION = 1
+
+# Windows that are never saved: terminals (their shells don't come back), the
+# Omarchy TUIs and agents that run in them, and system dialogs.
+SKIP_CLASSES = {
+    "alacritty", "foot", "footclient", "kitty", "com.mitchellh.ghostty", "ghostty",
+    "org.wezfurlong.wezterm", "xterm", "polkit-gnome-authentication-agent-1",
+    "hyprland-share-picker", "xdg-desktop-portal-gtk", "org.freedesktop.impl.portal.desktop.kde",
+}
+SKIP_PREFIXES = ("org.omarchy.",)
+CHROMIUM_PREFIXES = ("brave", "chrome", "chromium", "google-chrome", "microsoft-edge", "vivaldi", "opera", "helium")
+
+
+# ---- small helpers
+
+def hyprctl_json(*args):
+    out = subprocess.run(["hyprctl", *args, "-j"], capture_output=True, text=True).stdout
+    try:
+        return json.loads(out)
+    except json.JSONDecodeError:
+        return None
+
+
+def dispatch(expression):
+    subprocess.run(["hyprctl", "dispatch", expression], capture_output=True, text=True)
+
+
+def lua(value):
+    return json.dumps(str(value))
+
+
+def log(message):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as f:
+        f.write(f"{datetime.now().isoformat(timespec='seconds')} {message}\n")
+
+
+def write_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    tmp.replace(path)
+
+
+def read_json(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def instance():
+    return os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "none")
+
+
+def done_marker():
+    return RUNTIME / f"{instance()}.done"
+
+
+def restoring_marker():
+    return RUNTIME / "restoring"
+
+
+def refresh_widget():
+    subprocess.run(["omarchy-shell", "-q", "omageeko.session-restore", "refresh"], capture_output=True)
+
+
+def notify(title, body="", urgency="normal"):
+    subprocess.run(["notify-send", "-a", "Session restore", "-u", urgency, title, body], capture_output=True)
+
+
+def read_conf():
+    conf = {"auto": "false", "main": ""}
+    try:
+        for line in CONF.read_text().splitlines():
+            key, sep, value = line.partition("=")
+            if sep and not line.lstrip().startswith("#"):
+                conf[key.strip()] = value.strip()
+    except OSError:
+        pass
+    return conf
+
+
+def write_conf(conf):
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    lines = ["# omageeko session restore (omageeko-session-restore auto on|off)"]
+    lines += [f"{key}={value}" for key, value in conf.items()]
+    CONF.write_text("\n".join(lines) + "\n")
+
+
+def excluded_patterns():
+    try:
+        return [re.compile(line.strip()) for line in EXCLUDE.read_text().splitlines()
+                if line.strip() and not line.startswith("#")]
+    except (OSError, re.error):
+        return []
+
+
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+# ---- monitors
+
+def block_rows():
+    """[(block, connector, identity)] from monitor-workspaces.lua's state file."""
+    rows = []
+    try:
+        for line in BLOCKS.read_text().splitlines():
+            parts = line.split("\t")
+            if len(parts) == 3 and parts[0].isdigit():
+                rows.append((int(parts[0]), parts[1], parts[2]))
+    except OSError:
+        pass
+    return rows
+
+
+def monitor_layout():
+    monitors = [m for m in (hyprctl_json("monitors") or []) if not m.get("disabled")]
+    by_connector = {connector: (block, identity) for block, connector, identity in block_rows() if connector}
+    layout = []
+    for m in sorted(monitors, key=lambda m: m["name"]):
+        block, identity = by_connector.get(m["name"], (None, m.get("description") or m["name"]))
+        if block is None:
+            block = (m.get("activeWorkspace", {}).get("id", 1) - 1) // SLOTS
+        layout.append({
+            "connector": m["name"], "identity": identity, "block": block,
+            "mode": f'{m["width"]}x{m["height"]}', "position": f'{m["x"]}x{m["y"]}',
+            "scale": m.get("scale", 1), "focused": bool(m.get("focused")),
+        })
+    return layout
+
+
+def fingerprint(layout):
+    # The two halves of a picture-by-picture monitor report the same make,
+    # model and serial, so the connector is part of the identity.
+    return sorted(f'{m["connector"]}|{m["identity"]}|{m["block"]}|{m["mode"]}|{m["position"]}|{m["scale"]}'
+                  for m in layout)
+
+
+def main_monitor(layout, saved_main=""):
+    names = {m["connector"]: m for m in layout}
+    preferred = read_conf().get("main") or saved_main
+    if preferred in names:
+        return names[preferred]
+    for m in layout:
+        if m["position"] == "0x0":
+            return m
+    for m in layout:
+        if re.match(r"^(eDP|LVDS|DSI)", m["connector"]):
+            return m
+    for m in layout:
+        if m["focused"]:
+            return m
+    return layout[0] if layout else None
+
+
+# ---- desktop entries
+
+def desktop_dirs():
+    data_home = os.environ.get("XDG_DATA_HOME") or str(HOME / ".local/share")
+    data_dirs = os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"
+    dirs = [data_home, HOME / ".local/share/flatpak/exports/share", "/var/lib/flatpak/exports/share", *data_dirs.split(":")]
+    seen, out = set(), []
+    for d in dirs:
+        p = Path(d) / "applications"
+        if str(p) not in seen and p.is_dir():
+            seen.add(str(p))
+            out.append(p)
+    return out
+
+
+def parse_desktop(path):
+    entry, section = {}, None
+    try:
+        for line in path.read_text(errors="replace").splitlines():
+            if line.startswith("["):
+                section = line.strip()
+            elif section == "[Desktop Entry]" and "=" in line:
+                key, _, value = line.partition("=")
+                entry.setdefault(key.strip(), value.strip())
+    except OSError:
+        return None
+    return entry
+
+
+def webapp_key(url):
+    """Chromium's --app window class body: host + '_' + path with '/' → '_'."""
+    parts = urlsplit(url)
+    if not parts.hostname:
+        return None
+    return parts.hostname + "_" + (parts.path or "/").replace("/", "_")
+
+
+def desktop_index():
+    entries = []
+    seen = set()
+    for d in desktop_dirs():
+        for path in sorted(d.glob("*.desktop")):
+            if path.name in seen:
+                continue
+            seen.add(path.name)
+            entry = parse_desktop(path)
+            if not entry or entry.get("Type", "Application") != "Application":
+                continue
+            exec_line = entry.get("Exec", "")
+            url = None
+            m = re.search(r'omarchy-launch-webapp\s+"?([^"\s]+)"?', exec_line)
+            if m:
+                url = m.group(1)
+            entries.append({
+                "id": path.name,
+                "stem": path.name[:-len(".desktop")],
+                "wmclass": entry.get("StartupWMClass", ""),
+                "exec": exec_line,
+                "categories": entry.get("Categories", ""),
+                "url": url,
+                "webapp_key": webapp_key(url) if url else None,
+            })
+    return entries
+
+
+def default_browser_classes(entries):
+    out = subprocess.run(["xdg-settings", "get", "default-web-browser"], capture_output=True, text=True).stdout.strip()
+    classes = set()
+    for e in entries:
+        if e["id"] == out:
+            classes.add(e["stem"].lower())
+            if e["wmclass"]:
+                classes.add(e["wmclass"].lower())
+    # Omarchy's own default is Brave or Chromium; keep their classes even when
+    # xdg-settings answers with an alias entry.
+    return classes | {"brave-browser", "chromium", "google-chrome", "firefox"}
+
+
+def class_webapp_key(cls):
+    """'brave-mail.google.com__mail_u_1_-Default' -> 'mail.google.com__mail_u_1_'."""
+    low = cls.lower()
+    for prefix in sorted(CHROMIUM_PREFIXES, key=len, reverse=True):
+        if low.startswith(prefix + "-"):
+            m = re.match(r"^(.+_.*)-(Default|Profile[ _]\d+)$", cls[len(prefix) + 1:])
+            return m.group(1) if m else None
+    return None
+
+
+# ---- classification
+
+def flatpak_app(pid):
+    try:
+        info = Path(f"/proc/{pid}/root/.flatpak-info").read_text()
+    except OSError:
+        return None
+    m = re.search(r"^name=(.+)$", info, re.M)
+    return m.group(1).strip() if m else None
+
+
+def classify(client, entries, browser_classes, excludes):
+    cls = client.get("class") or client.get("initialClass") or ""
+    low = cls.lower()
+    if not cls or low in SKIP_CLASSES or low.startswith(SKIP_PREFIXES):
+        return None
+    if any(p.search(cls) for p in excludes):
+        return None
+    for e in entries:
+        if "TerminalEmulator" in e["categories"] and low in (e["wmclass"].lower(), e["stem"].lower()):
+            return None
+
+    if low in browser_classes:
+        return {"kind": "browser", "launch": {"browser": True}}
+
+    key = class_webapp_key(cls)
+    if key:
+        for e in entries:
+            if e["webapp_key"] == key:
+                return {"kind": "webapp", "launch": {"url": e["url"], "desktop": e["id"]}}
+        # No launcher: rebuild the URL from the class (the query is lost).
+        host, _, path = key.partition("_")
+        return {"kind": "webapp", "launch": {"url": f"https://{host}{path.replace('_', '/')}"}, "guessed": True}
+
+    for e in entries:
+        if e["wmclass"] and e["wmclass"].lower() == low:
+            return {"kind": "desktop", "launch": {"desktop": e["id"]}}
+    for e in entries:
+        stem = e["stem"].lower()
+        # Arch box exports are named omageeko-arch-<app id>.desktop
+        if stem == low or stem.endswith("-" + low):
+            return {"kind": "desktop", "launch": {"desktop": e["id"]}}
+
+    app = flatpak_app(client["pid"])
+    if app:
+        return {"kind": "flatpak", "launch": {"flatpak": app}}
+
+    try:
+        argv = [a for a in Path(f"/proc/{client['pid']}/cmdline").read_bytes().decode(errors="replace").split("\0") if a]
+    except OSError:
+        argv = []
+    if argv:
+        return {"kind": "cmdline", "launch": {"argv": argv}, "guessed": True}
+    return None
+
+
+# ---- save
+
+def capture():
+    layout = monitor_layout()
+    main = main_monitor(layout)
+    identity_of = {m["connector"]: m["identity"] for m in layout}
+    entries = desktop_index()
+    browsers = default_browser_classes(entries)
+    excludes = excluded_patterns()
+
+    clients = [c for c in (hyprctl_json("clients") or [])
+               if c.get("mapped", True) and not c.get("hidden") and c["workspace"]["id"] > 0]
+    clients.sort(key=lambda c: (c["workspace"]["id"], c["floating"], c["at"][0], c["at"][1]))
+
+    monitor_names = {m["id"]: m["name"] for m in (hyprctl_json("monitors") or [])}
+    windows = []
+    for c in clients:
+        kind = classify(c, entries, browsers, excludes)
+        if not kind:
+            continue
+        ws = c["workspace"]["id"]
+        connector = monitor_names.get(c["monitor"], "")
+        windows.append({
+            **kind,
+            "class": c["class"] or c["initialClass"],
+            "title": c["title"],
+            "workspace": ws,
+            "slot": (ws - 1) % SLOTS + 1,
+            "connector": connector,
+            "monitor": identity_of.get(connector, ""),
+            "floating": bool(c["floating"]),
+            "at": c["at"],
+            "size": c["size"],
+            "pid": c["pid"],
+        })
+
+    return {
+        "version": VERSION,
+        "saved": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "monitors": layout,
+        "fingerprint": fingerprint(layout),
+        "main": main["connector"] if main else "",
+        "windows": windows,
+    }
+
+
+def comparable(session):
+    return [(w["class"], w["workspace"], w["floating"]) for w in session.get("windows", [])] + session.get("fingerprint", [])
+
+
+def quit_browsers(windows):
+    """SIGTERM each browser process so it saves its whole session and exits
+    cleanly, instead of having its windows closed one by one."""
+    pids = {w["pid"] for w in windows if w["kind"] in ("browser", "webapp") and w.get("pid")}
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    deadline = time.time() + 5
+    while pids and time.time() < deadline:
+        pids = {p for p in pids if pid_alive(p)}
+        time.sleep(0.1)
+
+
+def cmd_save(args):
+    mode = "manual"
+    if "--auto" in args:
+        mode = "auto"
+    elif "--exit" in args:
+        mode = "exit"
+
+    status = compute_status()
+    if mode == "auto" and status["state"] in ("pending", "restoring"):
+        return 0  # the saved session hasn't been put back yet; keep it
+
+    session = capture()
+    old = read_json(SESSION)
+    count = len(session["windows"])
+
+    if count == 0 and mode == "manual":
+        print("omageeko-session-restore: no app windows to save", file=sys.stderr)
+        return 1
+    if mode != "manual" and old and count < 2 and len(old.get("windows", [])) > count:
+        log(f"save ({mode}): kept the saved session ({len(old['windows'])} windows) over {count}")
+    elif mode == "auto" and old and comparable(old) == comparable(session):
+        pass
+    else:
+        write_json(SESSION, session)
+        if mode != "auto":
+            log(f"save ({mode}): {count} windows")
+        if mode == "manual":
+            # What's on screen is now the saved session: nothing left to offer.
+            RUNTIME.mkdir(parents=True, exist_ok=True)
+            done_marker().write_text("saved")
+            print(f"Saved {count} windows")
+
+    if mode == "exit":
+        quit_browsers(session["windows"])
+    else:
+        refresh_widget()
+    return 0
+
+
+# ---- restore
+
+class Events:
+    """Hyprland's event socket (socket2)."""
+
+    def __init__(self):
+        path = Path(os.environ.get("XDG_RUNTIME_DIR", "")) / "hypr" / instance() / ".socket2.sock"
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(str(path))
+        self.sock.setblocking(False)
+        self.buffer = b""
+
+    def poll(self, timeout):
+        import select
+        events = []
+        ready, _, _ = select.select([self.sock], [], [], max(0, timeout))
+        if ready:
+            chunk = self.sock.recv(65536)
+            if not chunk:
+                raise ConnectionError("Hyprland event socket closed")
+            self.buffer += chunk
+        while b"\n" in self.buffer:
+            line, self.buffer = self.buffer.split(b"\n", 1)
+            name, _, data = line.decode(errors="replace").partition(">>")
+            events.append((name, data))
+        return events
+
+
+def common_prefix(a, b):
+    n = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        n += 1
+    return n
+
+
+class Restorer:
+    def __init__(self, session):
+        self.session = session
+        layout = monitor_layout()
+        self.same = fingerprint(layout) == session.get("fingerprint")
+        self.main = main_monitor(layout, session.get("main", ""))
+        main_block = self.main["block"] if self.main else 0
+        self.owner = {m["block"]: m["connector"] for m in layout}
+        self.homed = set()
+        self.pending = []
+        for i, w in enumerate(session["windows"]):
+            target = w["workspace"] if self.same else main_block * SLOTS + w["slot"]
+            self.pending.append({**w, "index": i, "target": target, "address": None})
+        self.placed = []
+        self.failed = []
+        self.browser_windows = []  # [address, title, seen time] waiting for a match
+        self.known = set()
+        self.started = time.time()
+
+    # -- matching
+
+    def unmatched(self, kind=None, cls=None):
+        return [p for p in self.pending if p["address"] is None
+                and (kind is None or p["kind"] == kind)
+                and (cls is None or p["class"].lower() == cls.lower())]
+
+    def home_workspace(self, target):
+        """A workspace that a moved window creates lands on whichever monitor
+        Hyprland picks; put it on the monitor whose block it belongs to."""
+        if target in self.homed:
+            return
+        connector = self.owner.get((target - 1) // SLOTS)
+        for ws in hyprctl_json("workspaces") or []:
+            if ws["id"] == target:
+                if connector and ws["monitor"] != connector:
+                    dispatch(f'hl.dsp.workspace.move({{ workspace = {lua(target)}, monitor = {lua(connector)} }})')
+                self.homed.add(target)
+                return
+
+    def place(self, entry, address):
+        entry["address"] = address
+        dispatch(f'hl.dsp.window.move({{ workspace = {lua(entry["target"])}, follow = false, window = {lua("address:" + address)} }})')
+        self.home_workspace(entry["target"])
+        if entry["floating"]:
+            dispatch(f'hl.dsp.window.float({{ action = "on", window = {lua("address:" + address)} }})')
+            if self.same:
+                x, y = entry["at"]
+                w, h = entry["size"]
+                dispatch(f'hl.dsp.window.resize({{ x = {w}, y = {h}, window = {lua("address:" + address)} }})')
+                dispatch(f'hl.dsp.window.move({{ x = {x}, y = {y}, window = {lua("address:" + address)} }})')
+            else:
+                dispatch(f'hl.dsp.window.center({{ window = {lua("address:" + address)} }})')
+        self.placed.append(entry)
+
+    def offer_window(self, address, cls, title):
+        if address in self.known:
+            return
+        self.known.add(address)
+        candidates = self.unmatched(cls=cls)
+        if not candidates:
+            return
+        if candidates[0]["kind"] == "browser":
+            self.browser_windows.append([address, title, time.time()])
+            return
+        exact = [c for c in candidates if c["title"] == title]
+        self.place((exact or candidates)[0], address)
+
+    def title_changed(self, address, title):
+        for bw in self.browser_windows:
+            if bw[0] == address:
+                bw[1] = title
+
+    def assign_browsers(self):
+        """Pair the browser's restored windows with the saved ones: same title
+        first, then the longest shared title start, then in order."""
+        windows = self.browser_windows
+        self.browser_windows = []
+        for address, title, _ in list(windows):
+            for p in self.unmatched(kind="browser"):
+                if p["title"] == title:
+                    self.place(p, address)
+                    windows = [w for w in windows if w[0] != address]
+                    break
+        for address, title, _ in list(windows):
+            best, score = None, 7
+            for p in self.unmatched(kind="browser"):
+                s = common_prefix(p["title"], title)
+                if s > score:
+                    best, score = p, s
+            if best:
+                self.place(best, address)
+                windows = [w for w in windows if w[0] != address]
+        for address, _, _ in windows:
+            rest = self.unmatched(kind="browser")
+            if rest:
+                self.place(rest[0], address)
+
+    def pump(self, events, seconds, until=None):
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            for name, data in events.poll(min(0.25, deadline - time.time())):
+                if name == "openwindow":
+                    parts = data.split(",", 3)
+                    if len(parts) == 4:
+                        self.offer_window("0x" + parts[0].removeprefix("0x"), parts[2], parts[3])
+                elif name == "windowtitlev2":
+                    address, _, title = data.partition(",")
+                    self.title_changed("0x" + address.removeprefix("0x"), title)
+            if until and until():
+                return
+
+    # -- launching
+
+    def launch(self, entry):
+        launch = entry["launch"]
+        if launch.get("browser"):
+            argv = ["omarchy-launch-browser"]
+        elif launch.get("url"):
+            argv = ["omarchy-launch-webapp", launch["url"]]
+        elif launch.get("desktop"):
+            argv = ["uwsm-app", "--", launch["desktop"]]
+        elif launch.get("flatpak"):
+            argv = ["uwsm-app", "--", "flatpak", "run", launch["flatpak"]]
+        elif launch.get("argv"):
+            argv = ["uwsm-app", "--", *launch["argv"]]
+        else:
+            return False
+        try:
+            subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            return True
+        except OSError as e:
+            log(f"restore: could not launch {shlex.join(argv)}: {e}")
+            return False
+
+    def run(self):
+        events = Events()
+
+        # Windows already open (an app that started on its own) count first,
+        # so running restore twice doesn't open everything twice.
+        for c in hyprctl_json("clients") or []:
+            if c["workspace"]["id"] > 0:
+                self.offer_window(c["address"], c["class"], c["title"])
+
+        # 1. The browser brings back its own windows, and maybe its web apps.
+        if self.unmatched(kind="browser"):
+            if not self.browser_windows:
+                self.launch(self.unmatched(kind="browser")[0])
+            # Settled: no new window for 4 s and at least 6 s since the first
+            # browser window (titles load late); at most 25 s.
+            last = [time.time(), len(self.known)]
+
+            def settled():
+                if len(self.known) != last[1]:
+                    last[0], last[1] = time.time(), len(self.known)
+                if not self.browser_windows:
+                    return False
+                first = min(bw[2] for bw in self.browser_windows)
+                return time.time() - last[0] > 4 and time.time() - first > 6
+
+            self.pump(events, 25, settled)
+            self.assign_browsers()
+
+        # 2. Web apps the browser didn't bring back, then everything else: one
+        #    launch per saved window still missing, in saved workspace order.
+        queue = self.unmatched(kind="webapp") + [p for p in self.unmatched() if p["kind"] not in ("webapp", "browser")]
+        for entry in queue:
+            if entry["address"]:
+                continue
+            if not self.launch(entry):
+                self.failed.append(entry)
+                entry["address"] = "failed"
+                continue
+            self.pump(events, 0.6)
+
+        # 3. Wait for the rest to show up.
+        self.pump(events, max(5, 60 - (time.time() - self.started)), lambda: not self.unmatched())
+        if self.browser_windows:
+            self.assign_browsers()
+
+        missing = self.unmatched()
+        return {
+            "finished": datetime.now().astimezone().isoformat(timespec="seconds"),
+            "sameMonitors": self.same,
+            "main": self.main["connector"] if self.main else "",
+            "placed": len(self.placed),
+            "missing": [f'{m["class"]} (workspace {m["target"]})' for m in missing],
+            "failed": [f'{f["class"]}' for f in self.failed],
+        }
+
+
+def cmd_restore(args):
+    session = read_json(SESSION)
+    if not session or session.get("version") != VERSION or not session.get("windows"):
+        print("omageeko-session-restore: no saved session", file=sys.stderr)
+        return 1
+    marker = restoring_marker()
+    RUNTIME.mkdir(parents=True, exist_ok=True)
+    try:
+        if pid_alive(int(marker.read_text())):
+            print("omageeko-session-restore: a restore is already running", file=sys.stderr)
+            return 1
+    except (OSError, ValueError):
+        pass
+    marker.write_text(str(os.getpid()))
+    refresh_widget()
+
+    try:
+        result = Restorer(session).run()
+    except Exception as e:  # report instead of leaving the widget spinning
+        result = {"finished": datetime.now().astimezone().isoformat(timespec="seconds"),
+                  "placed": 0, "missing": [], "failed": [f"error: {e}"]}
+    finally:
+        marker.unlink(missing_ok=True)
+
+    write_json(RUNTIME / "result.json", result)
+    partial = bool(result["missing"] or result["failed"])
+    done_marker().write_text("partial" if partial else "restored")
+    log(f"restore: placed {result['placed']}, same monitors {result.get('sameMonitors')}, "
+        f"main {result.get('main')}, missing {result['missing']}, failed {result['failed']}")
+    if partial:
+        notify("Session restore incomplete",
+               "Not placed: " + ", ".join(result["missing"] + result["failed"]), "normal")
+    refresh_widget()
+    return 0
+
+
+# ---- status, offer, dismiss, auto
+
+def compute_status():
+    session = read_json(SESSION)
+    conf = read_conf()
+    status = {"state": "hidden", "auto": conf.get("auto") == "true", "windows": 0,
+              "saved": "", "sameMonitors": False, "main": "", "missing": []}
+    if not session or session.get("version") != VERSION or not session.get("windows"):
+        return status
+    layout = monitor_layout()
+    main = main_monitor(layout, session.get("main", ""))
+    status.update({
+        "windows": len(session["windows"]),
+        "saved": session.get("saved", ""),
+        "sameMonitors": fingerprint(layout) == session.get("fingerprint"),
+        "main": main["connector"] if main else "",
+        "apps": sorted({w["class"] for w in session["windows"]}),
+    })
+    try:
+        if pid_alive(int(restoring_marker().read_text())):
+            status["state"] = "restoring"
+            return status
+    except (OSError, ValueError):
+        pass
+    try:
+        done = done_marker().read_text().strip()
+    except OSError:
+        done = ""
+    if done == "partial":
+        status["state"] = "partial"
+        status["missing"] = (read_json(RUNTIME / "result.json") or {}).get("missing", [])
+    elif done:
+        status["state"] = "done"
+    else:
+        status["state"] = "pending"
+    return status
+
+
+def cmd_status(args):
+    status = compute_status()
+    if "--json" in args:
+        print(json.dumps(status, ensure_ascii=False))
+    else:
+        print(f"state: {status['state']}  auto: {'on' if status['auto'] else 'off'}")
+        if status["windows"]:
+            where = "same monitors" if status["sameMonitors"] else f"monitors changed, all on {status['main']}"
+            print(f"saved: {status['saved']}  windows: {status['windows']}  ({where})")
+    return 0
+
+
+def cmd_dismiss(args):
+    RUNTIME.mkdir(parents=True, exist_ok=True)
+    done_marker().write_text("dismissed")
+    refresh_widget()
+    return 0
+
+
+def cmd_auto(args):
+    conf = read_conf()
+    value = args[0] if args else "status"
+    if value in ("on", "off"):
+        conf["auto"] = "true" if value == "on" else "false"
+        write_conf(conf)
+        refresh_widget()
+    elif value == "toggle":
+        conf["auto"] = "false" if conf.get("auto") == "true" else "true"
+        write_conf(conf)
+        refresh_widget()
+    print("on" if conf.get("auto") == "true" else "off")
+    return 0
+
+
+def cmd_offer(args):
+    """At login: restore straight away when auto-restore is on, otherwise ask."""
+    # Hyprland and monitor-workspaces.lua need a moment to settle the blocks.
+    for _ in range(30):
+        if hyprctl_json("monitors"):
+            break
+        time.sleep(1)
+    time.sleep(3)
+    refresh_widget()
+
+    status = compute_status()
+    if status["state"] != "pending":
+        return 0
+    if status["auto"]:
+        return cmd_restore([])
+
+    when = status["saved"][11:16] if len(status["saved"]) >= 16 else status["saved"]
+    where = "" if status["sameMonitors"] else f" · monitors changed, all on {status['main']}"
+    out = subprocess.run(["notify-send", "-a", "Session restore", "-u", "normal", "-t", "60000",
+                          "-A", "restore=Restore", "-A", "dismiss=Dismiss",
+                          f"Restore {status['windows']} windows?", f"Saved at {when}{where}"],
+                         capture_output=True, text=True).stdout.strip()
+    if out == "restore" and compute_status()["state"] == "pending":
+        return cmd_restore([])
+    if out == "dismiss":
+        return cmd_dismiss([])
+    return 0
+
+
+COMMANDS = {
+    "save": cmd_save, "restore": cmd_restore, "offer": cmd_offer, "status": cmd_status,
+    "dismiss": cmd_dismiss, "auto": cmd_auto,
+}
+
+USAGE = """Usage: omageeko-session-restore <command>
+
+  save [--auto|--exit]   save the open apps and their workspaces
+  restore                reopen the saved apps on their workspaces
+  offer                  at login: restore (auto on) or ask with a notification
+  status [--json]        what is saved and whether it was restored this login
+  dismiss                hide the restore offer until the next login
+  auto [on|off|toggle]   restore at login without asking"""
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help") or sys.argv[1] not in COMMANDS:
+        print(USAGE)
+        return 0 if len(sys.argv) >= 2 and sys.argv[1] in ("-h", "--help") else 2
+    return COMMANDS[sys.argv[1]](sys.argv[2:])
+
+
+if __name__ == "__main__":
+    sys.exit(main())

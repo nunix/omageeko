@@ -132,5 +132,11 @@ if ! grep -q '^export INPUT_METHOD=none' ~/.i18n 2>/dev/null; then
   log "Input method: ~/.i18n INPUT_METHOD=none (omarchy-fcitx5.service owns fcitx5)"
 fi
 
+# Session restore (docs/session-restore.md): autosave every 5 minutes and the
+# restore offer at login; omarchy-system saves before reboot/shutdown/logout
+systemctl --user daemon-reload
+systemctl --user enable omageeko-session-restore-save.timer omageeko-session-restore-offer.service
+log "Session restore: autosave timer and login offer enabled"
+
 touch "$STATE_DIR/user-provisioned"
 log "Layer 04 done. Run layers/04-session/verify.sh, then log out and pick 'Omarchy (Hyprland uwsm)' in lightdm."
