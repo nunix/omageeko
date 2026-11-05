@@ -1,13 +1,16 @@
 # upstream file <TAB> upstream commit its omageeko replacement was last reviewed against
-bin/omarchy-channel-set	5978d93ae7da0a325b7493501911e3f1266cadd3
+bin/omarchy-channel-set	ac2690cd7be4f47e4a255f5e2e78d904d436b068
+bin/omarchy-hibernation-available	ac2690cd7be4f47e4a255f5e2e78d904d436b068
 bin/omarchy-hibernation-setup	5978d93ae7da0a325b7493501911e3f1266cadd3
 bin/omarchy-pkg-drop	5978d93ae7da0a325b7493501911e3f1266cadd3
-bin/omarchy-provision-owner	5978d93ae7da0a325b7493501911e3f1266cadd3
-bin/omarchy-refresh-pacman	5978d93ae7da0a325b7493501911e3f1266cadd3
+bin/omarchy-provision-owner	ac2690cd7be4f47e4a255f5e2e78d904d436b068
+bin/omarchy-refresh-pacman	ac2690cd7be4f47e4a255f5e2e78d904d436b068
 bin/omarchy-reinstall-pkgs	5978d93ae7da0a325b7493501911e3f1266cadd3
-bin/omarchy-system-factory-reset	5978d93ae7da0a325b7493501911e3f1266cadd3
-bin/omarchy-update	5978d93ae7da0a325b7493501911e3f1266cadd3
-bin/omarchy-update-keyring	5978d93ae7da0a325b7493501911e3f1266cadd3
+bin/omarchy-setup-security-sshd	ac2690cd7be4f47e4a255f5e2e78d904d436b068
+bin/omarchy-system-factory-reset	ac2690cd7be4f47e4a255f5e2e78d904d436b068
+bin/omarchy-update	ac2690cd7be4f47e4a255f5e2e78d904d436b068
+bin/omarchy-update-aur-pkgs	ac2690cd7be4f47e4a255f5e2e78d904d436b068
+bin/omarchy-update-keyring	ac2690cd7be4f47e4a255f5e2e78d904d436b068
 bin/omarchy-upgrade-to-quattro	5978d93ae7da0a325b7493501911e3f1266cadd3
 bin/omarchy-version-channel	5978d93ae7da0a325b7493501911e3f1266cadd3
 bin/omarchy-version-pkgs	5978d93ae7da0a325b7493501911e3f1266cadd3

@@ -297,7 +297,12 @@ if [[ -n ${held// /} ]]; then
   omageeko_notes+=("migrations held (Arch-only, undecided): $held- see docs/bump-runbook.md#migration-arch")
 elif ((count == 0)); then
   result_line "none pending"
-elif omarchy-migrate >"$state_dir/migrate.out" 2>&1; then
+elif {
+  # omageeko: as upstream omarchy-update (4.5.0): migrations call the shell
+  # over IPC, so restart a shell still running the code stage 2 replaced
+  omarchy-restart-shell || true
+  omarchy-migrate
+} >"$state_dir/migrate.out" 2>&1; then
   result_line "$count handled"
   omageeko_notes+=("$count migration(s) run")
 else

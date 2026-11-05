@@ -3,9 +3,9 @@
 # the pinned commit + Tumbleweed patches (patches/) + overlay (overlay/bin
 # replacements, generated stubs from overlay/stubs.tsv) + pkgmap.tsv.
 # The commit lines are synced from upstream.lock by layers/03-omarchy-core/install.sh.
-%global commit 5978d93ae7da0a325b7493501911e3f1266cadd3
-%global commit_date 20261027
-%global upstream_release 4.5.0-rc2
+%global commit ac2690cd7be4f47e4a255f5e2e78d904d436b068
+%global commit_date 20261104
+%global upstream_release 4.5.0
 %global shortcommit %(echo %{commit} | cut -c1-7)
 # RPM forbids '-' in Version; '~' keeps a pre-release (4.5.0-rc2) sorting before its final release
 %global rpm_release %(echo %{upstream_release} | tr - '~')
