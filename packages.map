@@ -88,6 +88,7 @@ foot                   01 foot                             # quattro default ter
 xdg-terminal-exec      01 xdg-terminal-exec
 xdg-desktop-portal-gtk 01 xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland 01 xdg-desktop-portal-hyprland
+xorg-xsetroot          01 xsetroot                         # X11/XWayland root cursor (migration 1793512402)
 fontconfig             01 fontconfig
 
 # --- 01: fonts and themes
@@ -179,6 +180,9 @@ vulkan-radeon          05 libvulkan_radeon
 +usbmuxd               05 usbmuxd                          # extra: iPhone USB tethering (pairing daemon; the ipheth driver is in-kernel)
 +imobiledevice-tools   05 imobiledevice-tools              # extra: idevicepair etc. to trust/pair an iPhone
 vulkan-intel           -  libvulkan_intel                  # not this hardware; mapped for completeness
+vpl-gpu-rt             -  libmfx-gen1_2                    # Intel VPL GPU runtime; not this hardware, mapped for completeness
+v4l2loopback-dkms      -  v4l2loopback-kmp-default         # TW ships the module as a KMP (Elgato Cam Link 4K fix)
+v4l2-relayd            -  -                                # not applicable: not packaged for Tumbleweed; only the Elgato Cam Link 4K fix uses it
 lsp-plugins-lv2        -  lsp-plugins                      # speaker tunings (no tuning for this laptop)
 
 # --- 06b: Omarchy base applications (installed by layer 06; preinstalls skipped when removed)
@@ -265,6 +269,7 @@ libfprint              -  libfprint-2-2
 python-protobuf        -  python313-protobuf
 python-gpgme           -  python313-gpg
 libappindicator-gtk3   -  libappindicator3-1
+libappindicator        -  libappindicator3-1               # Arch renamed the GTK3 library (Dropbox removal)
 xpadneo-dkms           -  xpadneo
 umu-launcher           -  @none                            # Lutris on TW fetches its own umu runtime
 # Nerd fonts for Install > Style > Font: local RPMs (packages/nerd-fonts-extra)
