@@ -76,8 +76,10 @@ def mirror(url, name):
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         sh("git", "clone", "-q", "--bare", "--filter=blob:none", url, str(path))
-    sh("git", "-C", str(path), "fetch", "-q", "--prune", "--tags", "origin",
-       "+refs/heads/*:refs/heads/*")
+    # Forced tag refspec: upstream sometimes re-tags a release (v4.5.0 moved
+    # after backports), and a plain --tags fetch refuses to clobber it.
+    sh("git", "-C", str(path), "fetch", "-q", "--prune", "origin",
+       "+refs/heads/*:refs/heads/*", "+refs/tags/*:refs/tags/*")
     return path
 
 
