@@ -8,13 +8,14 @@ local omarchy_monitor_scale = "auto"
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
 
 -- Desk layout, left to right: DP-8 (C27G7) | DP-9 + HDMI-A-1 (Odyssey G9 halves,
--- picture-by-picture). DP-9 anchors the layout at 0x0; the laptop panel sits
--- below the center. Omarchy's internal-monitor toggle (loaded after this file)
--- still decides whether eDP-1 is on; this only sets where it goes when enabled.
+-- picture-by-picture), laptop panel centered below DP-9. Positions are explicit:
+-- eDP-1 connects before the dock's DP MST outputs, so relative positions
+-- (auto-center-*) placed it at 0x0 and shoved DP-9 aside. Omarchy's internal-
+-- monitor toggle (SUPER+CTRL+Delete, persistent) still decides whether eDP-1 is on.
+hl.monitor({ output = "DP-8", mode = "preferred", position = "-2560x0", scale = omarchy_monitor_scale })
 hl.monitor({ output = "DP-9", mode = "preferred", position = "0x0", scale = omarchy_monitor_scale })
-hl.monitor({ output = "DP-8", mode = "preferred", position = "auto-center-left", scale = omarchy_monitor_scale })
-hl.monitor({ output = "HDMI-A-1", mode = "preferred", position = "auto-center-right", scale = omarchy_monitor_scale })
-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto-center-down", scale = omarchy_monitor_scale })
+hl.monitor({ output = "HDMI-A-1", mode = "preferred", position = "2560x0", scale = omarchy_monitor_scale })
+hl.monitor({ output = "eDP-1", mode = "preferred", position = "320x1440", scale = 1 })
 
 -- Workspaces are per screen since Omarchy 4.5: each one has its own 1-10
 -- (default/hypr/monitor-workspaces.lua), so none are pinned here.
@@ -30,5 +31,5 @@ hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto-center-down"
 -- crisp instead of being stretched by the compositor. GTK only honors whole
 -- numbers, so use the nearest integer to the monitor scale, and restart an
 -- app for a change to reach it.
-local omarchy_gdk_scale = 2
+local omarchy_gdk_scale = 1
 hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
