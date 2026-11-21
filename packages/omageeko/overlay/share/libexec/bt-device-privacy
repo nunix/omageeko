@@ -13,6 +13,11 @@
 set -u
 shopt -s nullglob
 
+# btmgmt (bluez 5.82) never exits when stdin/stdout are not a terminal: under
+# systemd it hung forever, the oneshot stayed "activating" and the timer never
+# fired again. Run it in a pty (util-linux script) with a hard timeout.
+bm() { timeout 5 script -qec "btmgmt $*" /dev/null </dev/null 2>/dev/null | tr -d '\r'; }
+
 for info in /var/lib/bluetooth/*/*/info; do
   dir=${info%/info}
   addr=${dir##*/}
@@ -23,16 +28,16 @@ for info in /var/lib/bluetooth/*/*/info; do
     public) type=1 ;;
     *) type=2 ;;
   esac
-  index=$(btmgmt info 2>/dev/null | awk -v a="$adapter" '/^hci[0-9]+:/ { idx = substr($1, 4, length($1) - 4) } $1 == "addr" && $2 == a { print idx; exit }')
+  index=$(bm info | awk -v a="$adapter" '/^hci[0-9]+:/ { idx = substr($1, 4, length($1) - 4) } $1 == "addr" && $2 == a { print idx; exit }')
   [[ -n $index ]] || continue
-  out=$(timeout 5 btmgmt --index "$index" get-flags -t "$type" "$addr" 2>/dev/null)
+  out=$(bm --index "$index" get-flags -t "$type" "$addr")
   supported=$(awk '/Supported Flags:/ { print $3 }' <<<"$out")
   current=$(awk '/Current Flags:/ { print $3 }' <<<"$out")
   [[ -n $supported && -n $current ]] || continue
   (( supported & 0x02 )) || continue
   (( current & 0x02 )) && continue
   new=$(printf '0x%08x' $(( current | 0x02 )))
-  if timeout 5 btmgmt --index "$index" set-flags -t "$type" -f "$new" "$addr" >/dev/null 2>&1; then
+  if bm --index "$index" set-flags -t "$type" -f "$new" "$addr" | grep -q '^Set device flag'; then
     echo "Device Privacy Mode on for $addr ($current -> $new)"
   fi
 done

@@ -293,6 +293,12 @@ install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-monitor-wake-kick.se
 install -Dm755 %{_sourcedir}/overlay/share/libexec/bt-device-privacy %{buildroot}%{_libexecdir}/omageeko/bt-device-privacy
 install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-bt-device-privacy.service %{buildroot}%{_unitdir}/omageeko-bt-device-privacy.service
 install -Dm644 %{_sourcedir}/overlay/share/systemd/omageeko-bt-device-privacy.timer %{buildroot}%{_unitdir}/omageeko-bt-device-privacy.timer
+# bluetooth.service is normally pulled in only by udev when hci0 appears. A
+# soft-reboot (rebootmgr after transactional-update) keeps the kernel and the
+# device, so no add event and no bluetoothd. Want it from multi-user too; the
+# unit's ConditionPathIsDirectory=/sys/class/bluetooth keeps adapterless hosts quiet.
+install -d %{buildroot}%{_unitdir}/multi-user.target.wants
+ln -s ../bluetooth.service %{buildroot}%{_unitdir}/multi-user.target.wants/bluetooth.service
 
 # ---- omageeko-system (layer 08): Omarchy's files, at Tumbleweed's vendor paths
 install -Dm644 default/systemd/zram-generator.conf.d/90-omarchy.conf \
@@ -434,3 +440,4 @@ udevadm trigger --subsystem-match=i2c-dev --action=change >/dev/null 2>&1 || :
 %{_libexecdir}/omageeko/bt-device-privacy
 %{_unitdir}/omageeko-bt-device-privacy.service
 %{_unitdir}/omageeko-bt-device-privacy.timer
+%{_unitdir}/multi-user.target.wants/bluetooth.service

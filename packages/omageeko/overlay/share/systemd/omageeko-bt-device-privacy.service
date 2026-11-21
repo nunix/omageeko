@@ -6,6 +6,7 @@ ConditionPathIsDirectory=/var/lib/bluetooth
 
 [Service]
 Type=oneshot
+TimeoutStartSec=60
 ExecStart=/usr/libexec/omageeko/bt-device-privacy
 
 [Install]
