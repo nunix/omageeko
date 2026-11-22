@@ -1,0 +1,15 @@
+--- a/bin/omarchy-hw-recover-internal-monitor	2026-11-21 12:43:53.140636513 +0100
++++ b/bin/omarchy-hw-recover-internal-monitor	2026-11-21 12:43:53.141636540 +0100
+@@ -2,6 +2,12 @@
+ 
+ # omarchy:summary=Clear the internal-monitor-disable toggle if no external display is connected.
+ 
++# omageeko: the user unit runs this before graphical-session-pre.target, when the
++# systemd user manager's PATH doesn't have Omarchy's bin yet. `! omarchy-hw-external-monitors`
++# then failed with "command not found", counted as "no external display" and deleted
++# the persistent laptop-off toggle (SUPER+CTRL+Delete) at every login, docked or not.
++PATH="$(dirname "$(readlink -f "$0")"):$PATH"
++
+ TOGGLE="$HOME/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
+ 
+ if [[ -f $TOGGLE ]] && ! omarchy-hw-external-monitors; then

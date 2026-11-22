@@ -16,7 +16,7 @@ BarWidget {
 
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
 
-  property var status: ({ state: "hidden", auto: false, windows: 0, saved: "", sameMonitors: false, main: "", missing: [] })
+  property var status: ({ state: "hidden", auto: false, windows: 0, saved: "", sameMonitors: false, main: "", home: 0, missing: [] })
   property bool popupOpen: false
   property bool autoPending: false
 
@@ -168,7 +168,9 @@ BarWidget {
       Text {
         visible: root.hasSession
         textFormat: Text.PlainText
-        text: root.status.sameMonitors ? strings.t("sameMonitors") : strings.t("monitorsChanged").arg(root.status.main || "")
+        text: (root.status.sameMonitors || root.status.home >= root.status.windows) ? strings.t("sameMonitors")
+            : root.status.home > 0 ? strings.t("monitorsPartly").arg(root.status.home).arg(root.status.windows).arg(root.status.main || "")
+            : strings.t("monitorsChanged").arg(root.status.main || "")
         color: Qt.darker(root.bar ? root.bar.foreground : Commons.Color.foreground, 1.3)
         font.family: root.bar ? root.bar.fontFamily : Style.font.family
         font.pixelSize: Style.font.bodySmall

@@ -21,11 +21,16 @@ Decided (2026-11-04):
 - Brave's "Continue where you left off" is already on (set in
   `brave://settings`), so part 3.2 needs no install step.
 
+At login, `offer` waits until the set of monitors has held still for 4 s (30 s
+at most): the dock's DP MST outputs connect after the laptop panel.
+
 Goal: save which apps are open and the workspace each one sits on, and put them
-back on the same workspaces after a reboot. If the monitors are exactly the same
-as when the session was saved, every window goes back to its own monitor and
-workspace. If not, everything opens on the main monitor, on the same workspace
-number (1-10) it had.
+back on the same workspaces after a reboot. Each window goes back to its own
+monitor and workspace whenever that monitor is connected, even if the rest of
+the layout changed (laptop panel on or off, positions moved). Only a window whose
+monitor is gone opens on the main monitor, on the same workspace number (1-10).
+(Until 2026-11-21 any difference in the monitor set sent every window to the
+main monitor: one boot with the laptop panel on put the whole desk on DP-9.)
 
 A bar widget in `centerEnd`, after `omarchy.weather` and before
 `omarchy.system-update`, shows when there is a session to restore and runs the
@@ -152,9 +157,12 @@ At restore time, build the fingerprint again from the live monitors.
 - **Exact match**: same connectors, identities, modes, positions and scales.
   Every window goes back to its saved `workspace` id, which is its own
   monitor's block. Floating windows also get back their `at`/`size`.
-- **Anything else** (laptop only, a different dock, a G9 half missing, a
-  connector renamed): every window goes to slot `slot` of the **main
-  monitor**, i.e. workspace `block(main) * 10 + slot`. Windows from different
+- **Anything else**, per window: if its monitor is connected (same connector
+  and identity, or the same identity alone when only one monitor has it), the
+  window goes to slot `slot` of that monitor's current block; floating windows
+  keep their spot only if that monitor's position is unchanged. A window whose
+  monitor is gone (laptop only, a different dock, a G9 half missing) goes to
+  slot `slot` of the **main monitor**, i.e. workspace `block(main) * 10 + slot`. Windows from different
   monitors that had the same slot end up together on that workspace, which is
   what was asked for. Floating windows are centred instead of positioned.
 
@@ -265,7 +273,8 @@ when there's nothing to do, the same way the update icon does.
     been dismissed;
   - **pending** (restore icon, e.g. `󰑓`): a saved session exists that hasn't
     been restored since login. The tooltip shows "6 windows · saved 18:02 ·
-    same monitors" or "… · monitors changed: all on DP-9";
+    same monitors", "… · monitors changed, 4/6 on their own screen, the rest
+    on DP-9" or "… · monitors changed, all on DP-9";
   - **restoring** (spinner): while the listener is running;
   - **partial** (warning tint): the last restore left something unmatched.
     The tooltip says what.

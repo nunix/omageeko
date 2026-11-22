@@ -8,6 +8,7 @@
   "nothingSaved": "Nothing saved yet",
   "sameMonitors": "Same monitors: every window goes back to its own screen",
   "monitorsChanged": "Monitors changed: everything opens on %1",
+  "monitorsPartly": "Monitors changed: %1 of %2 windows go back to their own screen, the rest open on %3",
   "notPlaced": "Not placed: %1",
   "auto.label": "Restore at login",
   "auto.description": "Reopen the saved apps at login without asking",

@@ -5,9 +5,11 @@
 # omarchy:hidden=true
 # omageeko: session restore (docs/session-restore.md). `save` records every app
 # window with its workspace and the monitor layout; `restore` relaunches the
-# apps and moves each new window onto its workspace. With the same monitors
-# every window goes back where it was; otherwise each goes to the same
-# workspace number (1-10) on the main monitor. Brave and its web apps share
+# apps and moves each new window onto its workspace. Each window goes back to
+# its own monitor when that monitor is connected again (matched by connector
+# and identity, whatever else changed: the laptop panel on or off, a moved
+# position), on the same workspace number (1-10); a window whose monitor is gone
+# goes to that number on the main monitor. Brave and its web apps share
 # one process, so windows are told apart by class: `brave-browser` windows are
 # reopened by Brave's own "Continue where you left off" and matched by title,
 # web apps (`brave-<host>_<path>-Default`) by their launcher's URL.
@@ -177,6 +179,39 @@ def fingerprint(layout):
     # model and serial, so the connector is part of the identity.
     return sorted(f'{m["connector"]}|{m["identity"]}|{m["block"]}|{m["mode"]}|{m["position"]}|{m["scale"]}'
                   for m in layout)
+
+
+def window_monitor(w, layout):
+    """The connected monitor a saved window lived on: same connector and
+    identity, else the same identity on another connector (a dock that
+    renumbered its outputs). The two halves of a picture-by-picture monitor
+    differ only by connector (and a "#2"), so the identity alone can't pick
+    between them; the connector match runs first."""
+    connector, identity = w.get("connector", ""), w.get("monitor", "")
+    if not identity:
+        return None
+    for m in layout:
+        if m["connector"] == connector and m["identity"] == identity:
+            return m
+    same = [m for m in layout if m["identity"] == identity]
+    return same[0] if len(same) == 1 else None
+
+
+def plan(session, layout, main):
+    """[(target workspace, monitor or None)] for each saved window, in order."""
+    main_block = main["block"] if main else 0
+    out = []
+    for w in session.get("windows", []):
+        m = window_monitor(w, layout)
+        block = m["block"] if m else main_block
+        out.append((block * SLOTS + w["slot"], m))
+    return out
+
+
+def monitors_home(session, layout, main):
+    """How many saved windows go back to their own monitor, and the total."""
+    targets = plan(session, layout, main)
+    return sum(1 for _, m in targets if m), len(targets)
 
 
 def main_monitor(layout, saved_main=""):
@@ -487,13 +522,17 @@ class Restorer:
         layout = monitor_layout()
         self.same = fingerprint(layout) == session.get("fingerprint")
         self.main = main_monitor(layout, session.get("main", ""))
-        main_block = self.main["block"] if self.main else 0
         self.owner = {m["block"]: m["connector"] for m in layout}
+        saved_at = {m["connector"]: m["position"] for m in session.get("monitors", [])}
         self.homed = set()
         self.pending = []
-        for i, w in enumerate(session["windows"]):
-            target = w["workspace"] if self.same else main_block * SLOTS + w["slot"]
-            self.pending.append({**w, "index": i, "target": target, "address": None})
+        for i, (w, (target, m)) in enumerate(zip(session["windows"], plan(session, layout, self.main))):
+            # A floating window keeps its exact spot only if its monitor sits
+            # where it did; otherwise it is centred on its workspace.
+            exact = self.same or bool(m and saved_at.get(w.get("connector")) == m["position"]
+                                      and m["connector"] == w.get("connector"))
+            self.pending.append({**w, "index": i, "target": target, "exact": exact,
+                                 "home": m is not None, "address": None})
         self.placed = []
         self.failed = []
         self.browser_windows = []  # [address, title, seen time] waiting for a match
@@ -526,7 +565,7 @@ class Restorer:
         self.home_workspace(entry["target"])
         if entry["floating"]:
             dispatch(f'hl.dsp.window.float({{ action = "on", window = {lua("address:" + address)} }})')
-            if self.same:
+            if entry["exact"]:
                 x, y = entry["at"]
                 w, h = entry["size"]
                 dispatch(f'hl.dsp.window.resize({{ x = {w}, y = {h}, window = {lua("address:" + address)} }})')
@@ -666,6 +705,7 @@ class Restorer:
             "finished": datetime.now().astimezone().isoformat(timespec="seconds"),
             "sameMonitors": self.same,
             "main": self.main["connector"] if self.main else "",
+            "home": sum(1 for p in self.pending if p["home"]),
             "placed": len(self.placed),
             "missing": [f'{m["class"]} (workspace {m["target"]})' for m in missing],
             "failed": [f'{f["class"]}' for f in self.failed],
@@ -700,6 +740,7 @@ def cmd_restore(args):
     partial = bool(result["missing"] or result["failed"])
     done_marker().write_text("partial" if partial else "restored")
     log(f"restore: placed {result['placed']}, same monitors {result.get('sameMonitors')}, "
+        f"on their own monitor {result.get('home')}/{len(session['windows'])}, "
         f"main {result.get('main')}, missing {result['missing']}, failed {result['failed']}")
     if partial:
         notify("Session restore incomplete",
@@ -714,12 +755,14 @@ def compute_status():
     session = read_json(SESSION)
     conf = read_conf()
     status = {"state": "hidden", "auto": conf.get("auto") == "true", "windows": 0,
-              "saved": "", "sameMonitors": False, "main": "", "missing": []}
+              "saved": "", "sameMonitors": False, "main": "", "home": 0, "missing": []}
     if not session or session.get("version") != VERSION or not session.get("windows"):
         return status
     layout = monitor_layout()
     main = main_monitor(layout, session.get("main", ""))
+    home, _ = monitors_home(session, layout, main)
     status.update({
+        "home": home,
         "windows": len(session["windows"]),
         "saved": session.get("saved", ""),
         "sameMonitors": fingerprint(layout) == session.get("fingerprint"),
@@ -746,6 +789,15 @@ def compute_status():
     return status
 
 
+def describe_where(status):
+    """'' when every window goes back to its own monitor."""
+    if status["sameMonitors"] or status["home"] >= status["windows"]:
+        return ""
+    if status["home"]:
+        return f"monitors changed, {status['home']}/{status['windows']} on their own screen, the rest on {status['main']}"
+    return f"monitors changed, all on {status['main']}"
+
+
 def cmd_status(args):
     status = compute_status()
     if "--json" in args:
@@ -753,7 +805,7 @@ def cmd_status(args):
     else:
         print(f"state: {status['state']}  auto: {'on' if status['auto'] else 'off'}")
         if status["windows"]:
-            where = "same monitors" if status["sameMonitors"] else f"monitors changed, all on {status['main']}"
+            where = describe_where(status) or "same monitors"
             print(f"saved: {status['saved']}  windows: {status['windows']}  ({where})")
     return 0
 
@@ -782,12 +834,20 @@ def cmd_auto(args):
 
 def cmd_offer(args):
     """At login: restore straight away when auto-restore is on, otherwise ask."""
-    # Hyprland and monitor-workspaces.lua need a moment to settle the blocks.
-    for _ in range(30):
-        if hyprctl_json("monitors"):
+    # Hyprland and monitor-workspaces.lua need a moment to settle the blocks,
+    # and a dock's DP MST outputs connect seconds after the laptop panel (and
+    # the panel may switch off once they do): wait until the set of monitors
+    # has held still for 4 s, 30 s at most.
+    deadline = time.time() + 30
+    last, since = None, time.time()
+    while time.time() < deadline:
+        now = [(m["connector"], m["block"], m["position"]) for m in monitor_layout()]
+        if now != last:
+            last, since = now, time.time()
+        elif now and time.time() - since >= 4:
             break
-        time.sleep(1)
-    time.sleep(3)
+        time.sleep(0.5)
+    time.sleep(1)
     refresh_widget()
 
     status = compute_status()
@@ -797,7 +857,8 @@ def cmd_offer(args):
         return cmd_restore([])
 
     when = status["saved"][11:16] if len(status["saved"]) >= 16 else status["saved"]
-    where = "" if status["sameMonitors"] else f" · monitors changed, all on {status['main']}"
+    where = describe_where(status)
+    where = f" · {where}" if where else ""
     out = subprocess.run(["notify-send", "-a", "Session restore", "-u", "normal", "-t", "60000",
                           "-A", "restore=Restore", "-A", "dismiss=Dismiss",
                           f"Restore {status['windows']} windows?", f"Saved at {when}{where}"],
