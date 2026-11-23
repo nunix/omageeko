@@ -40,9 +40,10 @@ o.bind("mouse_right", "Next workspace (carousel)", "omarchy-hyprland-workspace-c
 o.rebind("SUPER + CTRL + LEFT", "Swap columns", "omarchy-hyprland-window-swap-columns left")
 o.rebind("SUPER + CTRL + RIGHT", "Swap columns", "omarchy-hyprland-window-swap-columns right")
 
--- omageeko (21K6S0A00C): screenshot like Trigger › Capture › Screenshot (and PRINT):
+-- omageeko (21K6S0A00C): screenshot like Trigger › Capture › Screenshot (and PRINT),
+-- replacing the Google Maps web app Omarchy now puts on this key:
 -- drag a rectangle (or snap to a window), then copy/save/edit
-o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
+o.rebind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
 
 -- omageeko (21K6S0A00C): reset the workspace's splits to even halves (columns,
 -- then rows inside them) after resizing; the key is \| on the US layout
