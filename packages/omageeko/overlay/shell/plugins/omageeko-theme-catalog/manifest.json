@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "omageeko.theme-catalog",
+  "name": "Theme catalog",
+  "version": "1.0.0",
+  "author": "omageeko",
+  "description": "Browse the omarchy.org community themes and their backgrounds, and install one",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "ThemeCatalog.qml"
+  }
+}

@@ -1,154 +1,213 @@
 #!/bin/bash
 
 # omarchy:summary=Browse the community themes from omarchy.org and install one
-# omarchy:args=[--refresh] [--list]
+# omarchy:args=[--refresh] [--list] [--prefetch] [--installed] [--install owner/name [oid]]
 # omarchy:examples=omarchy theme catalog | omarchy theme catalog --list | omarchy theme catalog --refresh
 # omageeko: upstream only asks for a repo URL (omarchy-theme-install). This
-# opens the omarchy.org community themes in the shell's image picker, with the
-# site's screenshots, the number of apps each theme styles beyond what Omarchy
-# renders from colors.toml, its GitHub stars and how long ago its default
-# branch last got a commit. Picking one hands its repo to omarchy-theme-install.
+# opens the omarchy.org community themes in the omageeko.theme-catalog shell
+# overlay: the site's screenshots, the number of apps each theme styles beyond
+# what Omarchy renders from colors.toml, its GitHub stars, how long ago its
+# default branch last got a commit, and thumbnails of the backgrounds it ships.
+# Picking one hands its repo to omarchy-theme-install.
 #
-# App counts come from a tree-only shallow clone of each repo, which needs no
-# GitHub API. Stars and commit dates take one batched GraphQL query per 80 repos
-# through gh, so they only show when gh is logged in. Cached for a week.
+# The overlay reads the index below straight from disk and keeps it in memory,
+# so opening it costs one IPC call. A stale index is rebuilt behind the open
+# picker rather than in front of it.
+#
+# With gh logged in, every repo's tree, backgrounds, stars and last commit come
+# from one GraphQL query per 25 repos (a few seconds for the whole site).
+# Without it, or for a theme kept in a subdirectory, a tree-only shallow clone
+# finds the same. Background thumbnails are made on demand by --thumbs (the
+# overlay asks for the selected theme first, then its neighbours) and kept by
+# git blob id, so a background is fetched once until its file changes.
 
 CACHE_PATH="${XDG_CACHE_HOME:-$HOME/.cache}/omageeko/theme-catalog"
-INDEX_FILE="$CACHE_PATH/index.v3.tsv"
+INDEX_FILE="$CACHE_PATH/index.v4.json"
 PREVIEW_DIR="$CACHE_PATH/previews"
-LABEL_DIR="$CACHE_PATH/labels"
-USER_THEMES_PATH="$HOME/.config/omarchy/themes"
+THUMB_DIR="$CACHE_PATH/thumbs"
+LOCK_FILE="$CACHE_PATH/build.lock"
 SITE="https://omarchy.org"
 MAX_AGE_DAYS=7
+THUMB_SIZE="480x270"
+GH_BATCH=25
 
-refresh=false
-list=false
-for arg in "$@"; do
-  case $arg in
-  --refresh) refresh=true ;;
-  --list) list=true ;;
-  *)
-    echo "Usage: omarchy-theme-catalog [--refresh] [--list]" >&2
-    exit 1
-    ;;
-  esac
-done
+usage() {
+  echo "Usage: omarchy-theme-catalog [--refresh] [--list] [--prefetch]" >&2
+  exit 1
+}
 
 # A theme file name -> the app it styles. Files Omarchy also renders from
 # colors.toml count too: shipping one means the author tuned that app by hand.
 # Metadata (colors.toml, icons.theme, light.mode, aether.*), images and docs
-# are not apps; neither is anything unknown.
-APP_MAP_AWK='
-  /^hyprland\.(conf|lua)$/ { print "Hyprland"; next }
-  /^hyprlock\.conf$/ { print "Hyprlock"; next }
-  /^(vscode(-theme)?|vscode_colors)\.json$/ { print "VS Code"; next }
-  /^(aether\.)?zed\.json$/ { print "Zed"; next }
-  /^(fzf|colors)\.fish$/ { print "fish"; next }
-  /^shell(\.[a-z-]+)*\.toml$/ { print "Omarchy shell"; next }
-  /^btop\.theme$/ { print "btop"; next }
-  /^neovim\.lua$/ { print "Neovim"; next }
-  /^chromium\.theme$/ { print "Chromium"; next }
-  /^walker\.css$/ { print "Walker"; next }
-  /^waybar\.css$/ { print "Waybar"; next }
-  /^mako\.ini$/ { print "Mako"; next }
-  /^swayosd\.css$/ { print "SwayOSD"; next }
-  /^alacritty\.toml$/ { print "Alacritty"; next }
-  /^ghostty\.conf$/ { print "Ghostty"; next }
-  /^kitty\.conf$/ { print "Kitty"; next }
-  /^foot\.ini$/ { print "Foot"; next }
-  /^gtk\.css$/ { print "GTK"; next }
-  /^qt6ct\.conf$/ { print "Qt"; next }
-  /^vencord\.theme\.css$/ { print "Discord"; next }
-  /^cava_theme$/ { print "Cava"; next }
-  /^wofi\.css$/ { print "Wofi"; next }
-  /^warp\.yaml$/ { print "Warp"; next }
-  /^keyboard\.rgb$/ { print "Keyboard RGB"; next }
-  /^steam\.css$/ { print "Steam"; next }
-  /^heroic\.css$/ { print "Heroic"; next }
-  /^obsidian\.css$/ { print "Obsidian"; next }
-  /^helix\.toml$/ { print "Helix"; next }
-  /^zen\.css$/ { print "Zen"; next }
-  /^firefox\.css$/ { print "Firefox"; next }
-  /^superfile\.toml$/ { print "superfile"; next }
-  /^pi\.json$/ { print "pi"; next }
-  /^hyprland-preview-share-picker\.css$/ { print "Share picker"; next }
-  /^gum[_.]env\.(lua|conf)$/ { print "gum"; next }
-  /^zellij\.kdl$/ { print "Zellij"; next }
-  /^eza\.yml$/ { print "eza"; next }
-  /^vicinae\.toml$/ { print "Vicinae"; next }
-  /^starship\.toml$/ { print "Starship"; next }
-  /^fcitx5/ { print "Fcitx5"; next }
-  /^claude\.json$/ { print "Claude"; next }
-  /^hermes\.yaml$/ { print "Hermes"; next }
-  /^t3code\.json$/ { print "T3 Code"; next }
-  /^tmux.*\.conf$/ { print "tmux"; next }
-  /^lazygit.*\.yml$/ { print "lazygit"; next }
-  /^(spicetify|spotify)/ { print "Spotify"; next }
-'
+# are not apps; neither is anything unknown. Pattern<TAB>app, one per line.
+APP_MAP='^hyprland\.(conf|lua)$	Hyprland
+^hyprlock\.conf$	Hyprlock
+^(vscode(-theme)?|vscode_colors)\.json$	VS Code
+^(aether\.)?zed\.json$	Zed
+^(fzf|colors)\.fish$	fish
+^shell(\.[a-z-]+)*\.toml$	Omarchy shell
+^btop\.theme$	btop
+^neovim\.lua$	Neovim
+^chromium\.theme$	Chromium
+^walker\.css$	Walker
+^waybar\.css$	Waybar
+^mako\.ini$	Mako
+^swayosd\.css$	SwayOSD
+^alacritty\.toml$	Alacritty
+^ghostty\.conf$	Ghostty
+^kitty\.conf$	Kitty
+^foot\.ini$	Foot
+^gtk\.css$	GTK
+^qt6ct\.conf$	Qt
+^vencord\.theme\.css$	Discord
+^cava_theme$	Cava
+^wofi\.css$	Wofi
+^warp\.yaml$	Warp
+^keyboard\.rgb$	Keyboard RGB
+^steam\.css$	Steam
+^heroic\.css$	Heroic
+^obsidian\.css$	Obsidian
+^helix\.toml$	Helix
+^zen\.css$	Zen
+^firefox\.css$	Firefox
+^superfile\.toml$	superfile
+^pi\.json$	pi
+^hyprland-preview-share-picker\.css$	Share picker
+^gum[_.]env\.(lua|conf)$	gum
+^zellij\.kdl$	Zellij
+^eza\.yml$	eza
+^vicinae\.toml$	Vicinae
+^starship\.toml$	Starship
+^fcitx5	Fcitx5
+^claude\.json$	Claude
+^hermes\.yaml$	Hermes
+^t3code\.json$	T3 Code
+^tmux.*\.conf$	tmux
+^lazygit.*\.yml$	lazygit
+^(spicetify|spotify)	Spotify'
 
-# One theme repo -> "apps<TAB>app, app, ..." on stdout. The theme lives
-# in the shallowest directory holding its palette (usually the repo root).
-probe_theme() {
-  local repo=$1 preview=$2 slug=$3 work=$4
-  local dir palette root files apps
+BG_PATTERN='\.(jpe?g|png|webp)$'
 
-  if [[ ! -f $PREVIEW_DIR/$slug.webp ]] &&
-    curl -fsSL --max-time 30 "$SITE$preview" -o "$PREVIEW_DIR/$slug.webp.tmp"; then
-    mv -f "$PREVIEW_DIR/$slug.webp.tmp" "$PREVIEW_DIR/$slug.webp"
-  fi
+# Records on stdin, one per theme: repo<TAB>root files (/-joined)<TAB>rest...
+# -> apps<TAB>app list<TAB>rest... An empty list stays a field ("-").
+count_apps() {
+  APP_MAP=$APP_MAP awk -F '\t' 'BEGIN {
+      map = ENVIRON["APP_MAP"]
+      OFS = "\t"
+      n = split(map, lines, "\n")
+      for (i = 1; i <= n; i++) { split(lines[i], kv, "\t"); pat[i] = kv[1]; app[i] = kv[2] }
+    }
+    {
+      delete seen; list = ""; count = 0
+      m = split($2, files, "/")
+      for (f = 1; f <= m; f++)
+        for (i = 1; i <= n; i++)
+          if (files[f] ~ pat[i]) {
+            if (!(app[i] in seen)) { seen[app[i]] = 1; names[++count] = app[i] }
+            break
+          }
+      # Sorted, case-insensitively like sort -f.
+      for (a = 1; a <= count; a++)
+        for (b = a + 1; b <= count; b++)
+          if (tolower(names[b]) < tolower(names[a])) { t = names[a]; names[a] = names[b]; names[b] = t }
+      for (a = 1; a <= count; a++) list = list (a > 1 ? ", " : "") names[a]
+      $2 = count OFS (list == "" ? "-" : list)
+      print
+    }'
+}
 
-  dir="$work/$slug"
-  GIT_TERMINAL_PROMPT=0 timeout 120 git clone --quiet --depth 1 --filter=blob:none --no-checkout -- "$repo" "$dir" 2>/dev/null || return
+# colors.toml on stdin -> "background,foreground,accent" (#rrggbb, or empty
+# fields): what the overlay tints its glass pane and text with. An
+# alacritty.toml (themes older than colors.toml) gives the first two.
+palette_colors() {
+  awk '/^[ \t]*(background|foreground|accent)[ \t]*=[^#]*#[0-9A-Fa-f]{6}/ {
+      key = $0; sub(/^[ \t]*/, "", key); sub(/[ \t]*=.*/, "", key)
+      if (!(key in c)) { v = $0; sub(/^[^#]*/, "", v); c[key] = substr(v, 1, 7) }
+    }
+    END { printf "%s,%s,%s", c["background"], c["foreground"], c["accent"] }'
+}
+
+# One repo the GraphQL pass could not settle -> the record count_apps reads:
+# owner/name<TAB>files<TAB>root<TAB>backgrounds (path:oid, |-joined)<TAB>colors.
+# The theme lives in the shallowest directory holding its palette.
+probe_clone() {
+  local repo=$1 work=$2
+  local dir palette root files bgs colors
+
+  dir="$work/clone.${repo//\//_}"
+  GIT_TERMINAL_PROMPT=0 timeout 120 git clone --quiet --depth 1 --filter=blob:none --no-checkout \
+    -- "https://github.com/$repo" "$dir" 2>/dev/null || return 0
 
   # Themes older than colors.toml only ship alacritty.toml; omarchy-theme-set
   # derives their palette from it.
   palette=$(git -C "$dir" ls-tree -r --name-only HEAD |
     awk -F/ '$NF == "colors.toml" { print 0 "\t" NF "\t" $0 } $NF == "alacritty.toml" { print 1 "\t" NF "\t" $0 }' |
     sort -n | head -n 1 | cut -f 3)
-  if [[ -z $palette ]]; then
-    rm -rf "$dir"
-    return
+  if [[ -n $palette ]]; then
+    root=${palette%"${palette##*/}"}
+    files=$(git -C "$dir" ls-tree --name-only "HEAD:$root" | paste -sd /)
+    bgs=$(git -C "$dir" ls-tree "HEAD:${root}backgrounds" 2>/dev/null |
+      awk -F '\t' -v root="$root" -v pat="$BG_PATTERN" '{ split($1, m, " ") } m[2] == "blob" && tolower($2) ~ pat && $2 !~ /[|]/ { printf "%s%s%s:%s", (n++ ? "|" : ""), root "backgrounds/", $2, m[3] }')
+    # The palette file is the one blob fetched: the clone has no others.
+    colors=$(git -C "$dir" show "HEAD:$palette" 2>/dev/null | palette_colors)
+    printf '%s\t%s\t%s\t%s\t%s\n' "$repo" "$files" "$root" "$bgs" "$colors"
   fi
-  root=${palette%"${palette##*/}"}
-
-  files=$(git -C "$dir" ls-tree --name-only "HEAD:$root")
-  apps=$(awk "$APP_MAP_AWK" <<<"$files" | sort -u)
   rm -rf "$dir"
-
-  # An empty list stays a field ("-"): read with a tab IFS collapses empty ones.
-  printf '%s\t%s\n' "$(grep -c . <<<"$apps")" "$(paste -sd , <<<"$apps" | sed 's/,/, /g; s/^$/-/')"
 }
 
-# owner/name lines on stdin -> "owner/name<TAB>stars<TAB>YYYY-MM-DD" of the last
-# commit on the default branch. Nothing when gh is missing or logged out.
-fetch_stats() {
-  local batch query i owner name
+# owner/name lines on stdin -> one JSON object per repo the API answered:
+# {repo, stars, updated, files, bgs, colors}. Nothing when gh is missing or logged out.
+graphql_batch() {
+  local query="{" i=0 repo owner name
 
-  command -v gh >/dev/null && gh auth status >/dev/null 2>&1 || return 0
-
-  while mapfile -t -n 80 batch && (( ${#batch[@]} > 0 )); do
-    query="{"
-    for i in "${!batch[@]}"; do
-      owner=${batch[$i]%%/*}
-      name=${batch[$i]#*/}
-      query+=" r$i: repository(owner: \"$owner\", name: \"$name\") { stargazerCount"
-      query+=" pushedAt defaultBranchRef { target { ... on Commit { committedDate } } } }"
-    done
-    query+=" }"
-    # Keyed by alias, not nameWithOwner: a renamed or moved repo answers with
-    # its new name.
-    while IFS=$'\t' read -r i stars updated; do
-      printf '%s\t%s\t%s\n' "${batch[$i]}" "$stars" "$updated"
-    done < <(gh api graphql -f query="$query" 2>/dev/null | jq -r '.data // {} | to_entries[] | select(.value != null) |
-      [(.key | ltrimstr("r")), .value.stargazerCount,
-       ((.value.defaultBranchRef.target.committedDate // .value.pushedAt // "-") | .[0:10])] | @tsv')
+  while IFS= read -r repo; do
+    owner=${repo%%/*}
+    name=${repo#*/}
+    query+=" r$i: repository(owner: \"$owner\", name: \"$name\") { stargazerCount pushedAt"
+    query+=" defaultBranchRef { target { ... on Commit { committedDate } } }"
+    query+=" root: object(expression: \"HEAD:\") { ... on Tree { entries { name } } }"
+    query+=" bg: object(expression: \"HEAD:backgrounds\") { ... on Tree { entries { name type oid } } }"
+    query+=" palette: object(expression: \"HEAD:colors.toml\") { ... on Blob { text } }"
+    query+=" legacy: object(expression: \"HEAD:alacritty.toml\") { ... on Blob { text } } }"
+    printf '%s\n' "$repo" >>"$1.repos"
+    i=$((i + 1))
   done
+  query+=" }"
+
+  # GitHub answers a heavy query under load with a 502 now and then; a batch
+  # is retried before its repos fall back to cloning. A missing repo still
+  # answers with data (and an error for that alias only).
+  local reply attempt
+  for attempt in 1 2 3; do
+    reply=$(gh api graphql -f query="$query" 2>/dev/null)
+    jq -e '.data' >/dev/null 2>&1 <<<"$reply" && break
+    reply=""
+    sleep "$attempt"
+  done
+
+  # Keyed by alias, not nameWithOwner: a renamed or moved repo answers with
+  # its new name.
+  [[ -n $reply ]] && jq -c --rawfile repos "$1.repos" --arg pat "$BG_PATTERN" '
+      def col($k): [match("(?m)^\\s*" + $k + "\\s*=[^#\\n]*(#[0-9A-Fa-f]{6})").captures[0].string][0] // "";
+      ($repos | split("\n")) as $names |
+      .data // {} | to_entries[] | select(.value != null) |
+      { repo: $names[.key | ltrimstr("r") | tonumber],
+        stars: .value.stargazerCount,
+        updated: ((.value.defaultBranchRef.target.committedDate // .value.pushedAt // "") | .[0:10]),
+        files: [(.value.root.entries // [])[].name],
+        bgs: [(.value.bg.entries // [])[] | select(.type == "blob" and (.name | ascii_downcase | test($pat)) and (.name | test("[|]") | not)) | "backgrounds/\(.name):\(.oid)"],
+        colors: ((.value.palette.text // .value.legacy.text // "") as $t | [($t | col("background")), ($t | col("foreground")), ($t | col("accent"))] | join(",")) }' <<<"$reply"
+  rm -f "$1.repos"
+}
+
+have_gh() {
+  command -v gh >/dev/null && gh auth status >/dev/null 2>&1
 }
 
 build_index() {
-  local page work cards count
+  local page work row slug
 
-  mkdir -p "$PREVIEW_DIR"
+  mkdir -p "$PREVIEW_DIR" "$THUMB_DIR"
   work=$(mktemp -d)
   trap 'rm -rf "$work"' RETURN
 
@@ -158,88 +217,248 @@ build_index() {
   # Repos are held to plain GitHub owner/name, which also keeps them safe to
   # hand to git and to the install command line.
   grep -oE '<li><a href="https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/?"[^>]*><img src="/assets/themes/[A-Za-z0-9_.-]+"[^>]*><span[^>]*>[^<]+</span>' <<<"$page" |
-    sed -E 's|.*href="([^"]+[^/"])/?".*src="([^"]+)".*<span[^>]*>([^<]+)</span>|\1\t\2\t\3|' |
-    sed -E "s/&#39;|&#x27;/'/g; s/&quot;/\"/g; s/&amp;/\\&/g" >"$work/cards.tsv"
+    sed -E 's|.*href="https://github\.com/([^"]+[^/"])/?".*src="([^"]+)".*<span[^>]*>([^<]+)</span>|\1\t\2\t\3|' |
+    sed -E "s/&#39;|&#x27;/'/g; s/&quot;/\"/g; s/&amp;/\\&/g" |
+    awk -F '\t' '!seen[$1]++' >"$work/cards.tsv"
+  [[ -s $work/cards.tsv ]] || return 1
 
-  count=$(grep -c . "$work/cards.tsv")
-  (( count > 0 )) || return 1
+  # Screenshots: one curl, many connections, only the ones not cached yet.
+  awk -F '\t' -v dir="$PREVIEW_DIR" -v site="$SITE" '{
+      slug = $1; sub("/", "_", slug)
+      print slug "\t" site $2 "\t" dir "/" slug ".webp"
+    }' "$work/cards.tsv" |
+    while IFS=$'\t' read -r _ url file; do
+      [[ -f $file ]] || printf 'url = "%s"\noutput = "%s"\n' "$url" "$file"
+    done >"$work/previews.curl"
+  [[ -s $work/previews.curl ]] &&
+    curl -fsSL --parallel --parallel-max 16 --max-time 60 --remove-on-error -K "$work/previews.curl" 2>/dev/null
 
-  export -f probe_theme
-  export APP_MAP_AWK PREVIEW_DIR SITE
+  # Trees, backgrounds and stats for every repo the API knows. A theme whose
+  # palette is not at the repo root (or every theme, without gh) is cloned.
+  : >"$work/api.jsonl"
+  if have_gh; then
+    cut -f 1 "$work/cards.tsv" | split -l "$GH_BATCH" - "$work/batch."
+    export -f graphql_batch
+    export BG_PATTERN
+    printf '%s\0' "$work"/batch.* |
+      xargs -0 -P 6 -I {} bash -c 'graphql_batch "$1" <"$1" >"$1.jsonl"' _ {}
+    cat "$work"/batch.*.jsonl >"$work/api.jsonl" 2>/dev/null
+  fi
 
-  local n=0 repo preview name slug
-  while IFS=$'\t' read -r repo preview name; do
-    n=$((n + 1))
-    slug=$(sed -E 's|https://github\.com/||; s|/|_|' <<<"$repo")
-    printf '%s\0%s\0%s\0%s\0%s\0' "$n" "$repo" "$preview" "$slug" "$name"
-  done <"$work/cards.tsv" |
-    xargs -0 -n 5 -P 8 bash -c '
-      result=$(probe_theme "$2" "$3" "$4" "'"$work"'") || exit 0
-      [[ -n $result ]] || exit 0
-      IFS=$'"'"'\t'"'"' read -r apps applist <<<"$result"
-      printf "%s\t%s\t%s\t%s\t%s\n" "$apps" "$5" "$2" "$4" "$applist" >"'"$work"'/row.$1"
-    ' _
+  jq -r 'select(.files | index("colors.toml") or index("alacritty.toml")) |
+      [.repo, (.files | join("/")), "", (.bgs | join("|")), .colors] | @tsv' "$work/api.jsonl" >"$work/trees.tsv"
+  jq -r '"\(.repo)\t\(.stars)\t\(.updated)"' "$work/api.jsonl" >"$work/stats.tsv"
 
-  cat "$work"/row.* 2>/dev/null >"$work/rows.tsv"
+  awk -F '\t' 'NR == FNR { done[$1] = 1; next } !($1 in done) { print $1 }' \
+    "$work/trees.tsv" "$work/cards.tsv" >"$work/clone.txt"
+  if [[ -s $work/clone.txt ]]; then
+    export -f probe_clone palette_colors
+    export BG_PATTERN
+    xargs -a "$work/clone.txt" -P 8 -I {} bash -c 'probe_clone "$1" "$2"' _ {} "$work" >>"$work/trees.tsv"
+  fi
+
+  # cards: repo name preview · trees: repo files root bgs colors · stats: repo stars updated
+  count_apps <"$work/trees.tsv" >"$work/apps.tsv"
+  awk -F '\t' 'BEGIN { OFS = "\t" }
+      FILENAME == ARGV[1] { name[$1] = $3; preview[$1] = $2; next }
+      FILENAME == ARGV[2] { stars[$1] = $2; updated[$1] = $3; next }
+      ($1 in name) { print $1, name[$1], $2, $3, $4, $5, stars[$1], updated[$1], $6 }' \
+    "$work/cards.tsv" "$work/stats.tsv" "$work/apps.tsv" >"$work/rows.tsv"
+
+  # A theme whose screenshot the site doesn't serve has nothing to show.
+  while IFS= read -r row; do
+    slug=${row%%$'\t'*}
+    [[ -s $PREVIEW_DIR/${slug/\//_}.webp ]] && printf '%s\n' "$row"
+  done <"$work/rows.tsv" >"$work/shown.tsv"
+  mv -f "$work/shown.tsv" "$work/rows.tsv"
   [[ -s $work/rows.tsv ]] || return 1
 
-  cut -f 3 "$work/rows.tsv" | sed 's|https://github\.com/||' | fetch_stats >"$work/stats.tsv"
-  awk -F '\t' 'BEGIN { OFS = "\t" }
-    NR == FNR { stars[$1] = $2; updated[$1] = $3; next }
-    { key = substr($3, 20); print $0, stars[key], updated[key] }' \
-    "$work/stats.tsv" "$work/rows.tsv" >"$work/index.tsv"
-  mv -f "$work/index.tsv" "$INDEX_FILE"
+  # Most apps first, then the most stars, then the name: the overlay keeps the
+  # order it is given.
+  sort -t $'\t' -k3,3nr -k7,7nr -k2,2f "$work/rows.tsv" |
+    jq -R -s --arg previews "$PREVIEW_DIR" '
+      [split("\n")[] | select(length > 0) | split("\t") |
+        { repo: .[0], name: .[1], apps: (.[2] | tonumber), appList: (if .[3] == "-" then "" else .[3] end),
+          root: .[4], slug: (.[0] | sub("/"; "_")),
+          bgs: [(.[5] // "") | split("|")[] | select(length > 41) | { path: .[0:-41], oid: .[-40:] }],
+          stars: ((.[6] // "") | tonumber? // null),
+          updated: ((.[7] // "") | if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") then . else null end),
+          colors: ((.[8] // "") | split(",") | { background: (.[0] // ""), foreground: (.[1] // ""), accent: (.[2] // "") }) }] |
+      { version: 4, built: now | floor, previews: $previews, themes: . }' >"$work/index.json" || return 1
+
+  mv -f "$work/index.json" "$INDEX_FILE"
+  # Left by the image-picker version of the catalog.
+  rm -rf "$CACHE_PATH/labels" "$CACHE_PATH"/index.v3.tsv
+
+  # Thumbnails of backgrounds no theme ships any more.
+  jq -r '.themes[].bgs[].oid + ".jpg"' "$INDEX_FILE" | sort -u >"$work/keep.txt"
+  find "$THUMB_DIR" -maxdepth 1 -name '*.jpg' -printf '%f\n' | sort |
+    comm -23 - "$work/keep.txt" | sed "s|^|$THUMB_DIR/|" | xargs -r rm -f
+}
+
+# Build under a lock: the overlay and a terminal may both ask at once, and the
+# second simply waits for the first's index.
+locked_build() {
+  local started
+
+  exec {lock_fd}>"$LOCK_FILE"
+  started=$(date +%s)
+  flock "$lock_fd"
+  # Another build finished while this one waited.
+  if [[ -s $INDEX_FILE ]] && (( $(stat -c %Y "$INDEX_FILE") >= started )); then
+    return 0
+  fi
+  build_index
 }
 
 index_is_fresh() {
   [[ -s $INDEX_FILE ]] && [[ -z $(find "$INDEX_FILE" -mtime +$MAX_AGE_DAYS 2>/dev/null) ]]
 }
 
-# Most apps first, then the most stars, then the name.
-sorted_index() {
-  sort -t $'\t' -k1,1nr -k6,6nr -k2,2f "$INDEX_FILE"
+# Percent-encode each path segment for a raw.githubusercontent.com URL.
+url_path() {
+  local path=$1 out="" c i
+  for ((i = 0; i < ${#path}; i++)); do
+    c=${path:i:1}
+    case $c in
+    [A-Za-z0-9._~/-]) out+=$c ;;
+    *) printf -v c '%%%02X' "'$c"; out+=$c ;;
+    esac
+  done
+  printf '%s' "$out"
 }
 
-# YYYY-MM-DD -> 3d, 5w, 4mo, 2y: compact, since the picker capitalises words.
-age() {
-  local days=$(( ($(date +%s) - $(date -d "$1" +%s)) / 86400 ))
+# One background -> $THUMB_DIR/<oid>.jpg, printing the oid when it is there.
+make_thumb() {
+  local repo=$1 path=$2 oid=$3
+  local thumb="$THUMB_DIR/$oid.jpg" tmp
 
-  if (( days < 14 )); then
-    printf '%dd' "$days"
-  elif (( days < 60 )); then
-    printf '%dw' $((days / 7))
-  elif (( days < 365 )); then
-    printf '%dmo' $((days / 30))
-  else
-    printf '%dy' $((days / 365))
+  if [[ ! -s $thumb ]]; then
+    tmp=$(mktemp "$THUMB_DIR/.dl.XXXXXX") || return 0
+    if curl -fsSL --max-time 60 "https://raw.githubusercontent.com/$repo/HEAD/$(url_path "$path")" -o "$tmp" &&
+      magick -define jpeg:size=960x540 "$tmp[0]" -auto-orient -thumbnail "$THUMB_SIZE^" -strip -quality 82 "$tmp.jpg" 2>/dev/null; then
+      mv -f "$tmp.jpg" "$thumb"
+    fi
+    rm -f "$tmp" "$tmp.jpg"
   fi
+  [[ -s $thumb ]] && printf '%s\n' "$oid"
 }
 
-# 1234 -> 1.2k
-short_count() {
-  if (( $1 >= 1000 )); then
-    printf '%d.%dk' $(($1 / 1000)) $(($1 % 1000 / 100))
-  else
-    printf '%d' "$1"
-  fi
+# --thumbs repo path:oid [path:oid...]: one theme's backgrounds, in parallel.
+thumbs() {
+  local repo=$1 bg
+  shift
+  [[ $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || exit 1
+  mkdir -p "$THUMB_DIR"
+  export -f make_thumb url_path
+  export THUMB_DIR THUMB_SIZE
+  for bg in "$@"; do
+    [[ ${bg##*:} =~ ^[0-9a-f]{40}$ ]] && printf '%s\0%s\0%s\0' "$repo" "${bg%:*}" "${bg##*:}"
+  done | xargs -0 -n 3 -P 6 bash -c 'make_thumb "$@"' _
 }
 
-# Same name omarchy-theme-install gives the clone.
-installed_name() {
+# The directory omarchy-theme-install clones a repo into.
+theme_dir_name() {
   basename -- "$1" .git | sed -E 's/^omarchy-//; s/-theme$//' | tr '[:upper:]' '[:lower:]'
+}
+
+# A clone's origin URL -> owner/name in lower case (empty unless GitHub).
+repo_of_url() {
+  sed -nE 's#^(https?://|ssh://)?([^@/]+@)?github\.com[:/]+##; T; s#/+$##; s#\.git$##; /^[^/]+\/[^/]+$/p' <<<"$1" |
+    tr '[:upper:]' '[:lower:]'
+}
+
+# --installed: owner/name<TAB>directory for every theme in ~/.config/omarchy/themes
+# that is a clone of a GitHub repo. A same-named directory the user wrote (an
+# overlay on a stock theme, say) is not a clone and is not listed.
+installed_themes() {
+  local dir repo
+  for dir in "$HOME/.config/omarchy/themes"/*/; do
+    [[ -e ${dir}.git ]] || continue
+    repo=$(repo_of_url "$(git -C "$dir" config --get remote.origin.url 2>/dev/null)")
+    [[ -n $repo ]] && printf '%s\t%s\n' "$repo" "$(basename -- "$dir")"
+  done
+}
+
+# --install owner/name [oid]: the overlay's Enter. A theme already cloned from
+# that repo is only applied, not cloned again; anything else goes through
+# omarchy-theme-install (in a terminal, which the overlay opens). With a
+# background's blob id (the backgrounds row), that background is set once the
+# theme is in; the path comes from the index, so no path rides the command line.
+install_theme() {
+  local repo=$1 oid=${2:-} name path
+
+  [[ $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "Not a GitHub owner/name: $repo" >&2; exit 1; }
+  name=$(theme_dir_name "$repo")
+  if installed_themes | grep -qxF "${repo,,}"$'\t'"$name"; then
+    omarchy-theme-set "$name" || exit
+  else
+    omarchy-theme-install "https://github.com/$repo" || exit
+  fi
+  [[ $oid =~ ^[0-9a-f]{40}$ ]] || exit 0
+
+  path=$(jq -r --arg repo "$repo" --arg oid "$oid" \
+    'first(.themes[] | select(.repo == $repo) | .bgs[] | select(.oid == $oid) | .path) // empty' "$INDEX_FILE")
+  if [[ -n $path && -f $HOME/.config/omarchy/themes/$name/$path ]]; then
+    omarchy-theme-bg-set "$HOME/.config/omarchy/themes/$name/$path"
+  else
+    echo "The theme is in, but its background $oid was not found in it." >&2
+  fi
+}
+
+# --prefetch: every theme's thumbnails, gently, for a catalog that never waits.
+prefetch() {
+  local repo bgs list
+  index_is_fresh || locked_build || exit 1
+  jq -r '.themes[] | select(.bgs | length > 0) | "\(.repo)\t\([.bgs[] | "\(.path):\(.oid)"] | join("|"))"' "$INDEX_FILE" |
+    while IFS=$'\t' read -r repo bgs; do
+      IFS='|' read -r -a list <<<"$bgs"
+      nice -n 10 ionice -c 3 "$0" --thumbs "$repo" "${list[@]}" >/dev/null
+    done
 }
 
 mkdir -p "$CACHE_PATH"
 
-if [[ $refresh == true ]] || ! index_is_fresh; then
-  if [[ $list != true ]]; then
-    notify-send -a omarchy -t 5000 "Theme catalog" "Reading the community themes from omarchy.org (about a minute)…"
-  else
-    echo "Reading the community themes from omarchy.org (about a minute)…" >&2
-  fi
+case ${1:-} in
+--thumbs)
+  shift
+  thumbs "$@"
+  exit
+  ;;
+--build)
+  # The overlay's background refresh: quiet, and only when stale or asked.
+  [[ ${2:-} == --force ]] || ! index_is_fresh || exit 0
+  locked_build
+  exit
+  ;;
+--prefetch)
+  prefetch
+  exit
+  ;;
+--install)
+  shift
+  install_theme "$@"
+  exit
+  ;;
+--installed)
+  installed_themes
+  exit
+  ;;
+esac
 
-  if ! build_index && [[ ! -s $INDEX_FILE ]]; then
-    notify-send -a omarchy -u critical "Theme catalog" "Could not read the themes from omarchy.org"
+refresh=false
+list=false
+for arg in "$@"; do
+  case $arg in
+  --refresh) refresh=true ;;
+  --list) list=true ;;
+  *) usage ;;
+  esac
+done
+
+if [[ $refresh == true ]] || { [[ $list == true ]] && ! index_is_fresh; }; then
+  echo "Reading the community themes from omarchy.org…" >&2
+  if ! locked_build && { [[ $refresh == true ]] || [[ ! -s $INDEX_FILE ]]; }; then
     echo "Could not read the themes from omarchy.org" >&2
     exit 1
   fi
@@ -247,57 +466,11 @@ fi
 
 if [[ $list == true ]]; then
   {
-    printf 'APPS\tSTARS\tUPDATED\tTHEME\tREPO\n'
-    sorted_index | awk -F '\t' 'BEGIN { OFS = "\t" } { print $1, ($6 == "" ? "-" : $6), ($7 == "" ? "-" : $7), $2, $3 }'
+    printf 'APPS\tSTARS\tUPDATED\tBGS\tTHEME\tREPO\n'
+    jq -r '.themes[] | [.apps, (.stars // "-"), (.updated // "-"), (.bgs | length), .name, "https://github.com/" + .repo] | @tsv' "$INDEX_FILE"
   } | column -t -s $'\t'
-  exit 0
+elif [[ $refresh != true ]]; then
+  # The overlay opens on whatever index there is and refreshes it itself.
+  omarchy-shell shell summon omageeko.theme-catalog '{}' >/dev/null ||
+    { echo "The theme catalog overlay is not available in this shell" >&2; exit 1; }
 fi
-
-rm -rf "$LABEL_DIR"
-mkdir -p "$LABEL_DIR"
-
-# The picker labels each row after its file name, so the label carries the
-# counts; it also filters on it (a name, "installed").
-declare -A repo_for
-rows=""
-while IFS=$'\t' read -r apps name repo slug _ stars updated; do
-  [[ -f $PREVIEW_DIR/$slug.webp ]] || continue
-
-  case $apps in
-  0) label="${name//\// } · colors only" ;;
-  1) label="${name//\// } · 1 app" ;;
-  *) label="${name//\// } · $apps apps" ;;
-  esac
-  [[ -n $stars ]] && label+=" · ★ $(short_count "$stars")"
-  [[ $updated == ????-??-?? ]] && label+=" · ↻ $(age "$updated")"
-  [[ -d $USER_THEMES_PATH/$(installed_name "$repo") ]] && label+=" · installed"
-
-  link="$LABEL_DIR/$label.webp"
-  [[ -e $link ]] && continue
-  ln -s "$PREVIEW_DIR/$slug.webp" "$link"
-  repo_for[$link]=$repo
-  rows+="${rows:+$'\n'}$link"$'\t'"$link"
-done < <(sorted_index)
-
-selection_file=$(mktemp)
-done_file=$(mktemp)
-rm -f "$done_file"
-trap 'rm -f "$selection_file" "$done_file"' EXIT
-
-# Same handshake omarchy-menu-images uses; rows go base64 through the shell IPC.
-open_result=$(omarchy-shell image-selector open "" "$(printf '%s' "$rows" | base64 -w 0)" "" \
-  "$selection_file" "$done_file" true true)
-if [[ $open_result != "ok" ]]; then
-  echo "Image selector failed to accept request" >&2
-  exit 1
-fi
-
-while [[ ! -e $done_file ]]; do
-  sleep 0.05
-done
-
-selection=$(<"$selection_file")
-[[ -n $selection && -n ${repo_for[$selection]} ]] || exit 0
-repo=${repo_for[$selection]}
-
-exec omarchy-launch-floating-terminal-with-presentation omarchy-theme-install "$repo"
